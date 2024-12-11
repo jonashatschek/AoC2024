@@ -2,8 +2,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.4.33213.308
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AoC2024_1", "AoC2024_1\AoC2024_1.csproj", "{EF2AC574-8D37-4DA2-BE67-E28CB520230D}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AoC2024_2", "AoC2024_2\AoC2024_2.csproj", "{BE0CC471-D0AE-40BC-B72C-D83B81D5F7C6}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AoC2024_3", "AoC2024_3\AoC2024_3.csproj", "{5DE1C4C1-8A55-40F0-83A1-8CCF139B0314}"
@@ -14,7 +12,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AoC2024_5", "AoC2024_5\AoC2
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AoC2024_6", "AoC2024_6\AoC2024_6.csproj", "{A9D39996-01F7-4087-BD21-8CD91D414F3C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AoC2024_7", "AoC2024_7\AoC2024_7.csproj", "{55E406EB-BB4D-4515-8FBC-31B9A5259104}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AoC2024_7", "AoC2024_7\AoC2024_7.csproj", "{55E406EB-BB4D-4515-8FBC-31B9A5259104}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -22,10 +20,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{EF2AC574-8D37-4DA2-BE67-E28CB520230D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{EF2AC574-8D37-4DA2-BE67-E28CB520230D}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{EF2AC574-8D37-4DA2-BE67-E28CB520230D}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{EF2AC574-8D37-4DA2-BE67-E28CB520230D}.Release|Any CPU.Build.0 = Release|Any CPU
 		{BE0CC471-D0AE-40BC-B72C-D83B81D5F7C6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{BE0CC471-D0AE-40BC-B72C-D83B81D5F7C6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BE0CC471-D0AE-40BC-B72C-D83B81D5F7C6}.Release|Any CPU.ActiveCfg = Release|Any CPU
