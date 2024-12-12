@@ -6,21 +6,18 @@ namespace AoC2024_8
     {
         static void Main(string[] args)
         {
-            var test = true;
-
+            var test = false;
             var path = test ? "Test" : "Real";
-
-            var input = File.ReadAllLines($"{path}/input.txt");
-
+            var input = File.ReadAllLines($"{path}/input.txt").Reverse().ToArray();
             var antennas = new List<Antenna>();
+            var mapYMax = input.Length - 1;
+            var mapXMax = input[0].Length - 1;
 
-
-            //todo add all antennas to a list
-            for (var y = 0; y < input.Length; y++)
+            for (var y = 0; y <= mapYMax; y++)
             {
                 var line = input[y];
 
-                for (var x = 0; x < line.Length; x++)
+                for (var x = 0; x <= mapXMax; x++)
                 {
                     var position = line[x];
 
@@ -36,16 +33,12 @@ namespace AoC2024_8
                 }
             }
 
-            //todo select all antennas that count > 1
             var frequencies = antennas.GroupBy(x => x.Frequency).Where(y => y.Count() > 1).ToList();
 
             foreach (var frequency in frequencies)
             {
 
-                //for every antenna in antenna group, calculate distance to all other antennas with same Id
-
                 var antennasWithRightFrequency = antennas.Where(x => x.Frequency == frequency.Key).ToList();
-
 
                 foreach (var headAntenna in antennasWithRightFrequency)
                 {
@@ -53,50 +46,38 @@ namespace AoC2024_8
 
                     foreach (var otherAntenna in antennasWithRightFrequency.Where(x => x.Coordinates.Item1 != headAntCoords.Item1 && x.Coordinates.Item2 != headAntCoords.Item2))
                     {
-                        var dx = headAntCoords.Item1 - otherAntenna.Coordinates.Item1;
-                        var dy = headAntCoords.Item2 - otherAntenna.Coordinates.Item2;
+                        var othAntCoords = otherAntenna.Coordinates;
 
-                        headAntenna.Antinodes.Add(new AntiNode()
+                        var dx = othAntCoords.Item1 - headAntCoords.Item1;
+                        var dy = othAntCoords.Item2 - headAntCoords.Item2;
+
+                        //if (headAntCoords.Item1 == 8 && headAntCoords.Item2 == 3 && othAntCoords.Item1 == 9 &&
+                        //    othAntCoords.Item2 == 2)
+                        //{
+                        //    Console.WriteLine("");
+                        //}
+
+                        var antiNodePosX = dx + othAntCoords.Item1;
+                        var antiNodePosY = dy + othAntCoords.Item2;
+
+                        if (0 <= antiNodePosX && antiNodePosX <= mapXMax && 0 <= antiNodePosY && antiNodePosY <= mapYMax)
                         {
-                            AntiNodeForFrequency = frequency.Key,
-                            Coordinates = new Tuple<int, int>(dy * 2, dx * 2)
-                        });
+                            otherAntenna.Antinodes.Add(new AntiNode()
+                            {
+                                AntiNodeForFrequency = frequency.Key,
+                                Coordinates = new Tuple<int, int>(antiNodePosX, antiNodePosY)
+                            });
+                        }
+
                     }
                 }
 
-                //for (int i = 0; i < antennasWithRightFrequency.Count - 1; i++)
-                //{
-                //    //var dx = Math.Abs(antennasWithRigthFrequency[i].Coordinates.Item1 - antennasWithRigthFrequency[i + 1].Coordinates.Item1);
-                //    //var dy = Math.Abs(antennasWithRigthFrequency[i].Coordinates.Item2 - antennasWithRigthFrequency[i + 1].Coordinates.Item2);
-                //    var dx = antennasWithRightFrequency[i].Coordinates.Item1 - antennasWithRightFrequency[i + 1].Coordinates.Item1;
-                //    var dy = antennasWithRightFrequency[i].Coordinates.Item2 - antennasWithRightFrequency[i + 1].Coordinates.Item2;
-
-                //    antennasWithRightFrequency[i].Antinodes.Add(new AntiNode()
-                //    {
-                //        AntiNodeForFrequency = frequency.Key,
-                //        Coordinates = new Tuple<int, int>(dy * 2, dx * 2)
-                //    });
-
-                //}
-
-                //foreach (var antenna in antennas.Where(x => x.Frequency == frequency.Key))
-                //{
-
-
-
-                //}
-
-                //when distance to other antennas with same Ids is known, an antinode should be added.
-
-                //only locate antennas within map size
-
-
-
             }
 
-            var count = antennas.Select(x => x.Antinodes).Count().ToString();
+            //p1
+            Console.WriteLine(antennas.SelectMany(a => a.Antinodes).DistinctBy(x => new { x.Coordinates.Item1, x.Coordinates.Item2 }).ToList().Count);
 
-            Console.WriteLine(count);
+
         }
     }
 
