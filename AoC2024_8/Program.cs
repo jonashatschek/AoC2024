@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel;
+using System.Linq.Expressions;
 
 namespace AoC2024_8
 {
@@ -12,6 +13,9 @@ namespace AoC2024_8
             var antennas = new List<Antenna>();
             var mapYMax = input.Length - 1;
             var mapXMax = input[0].Length - 1;
+
+            bool part1 = true;
+            var p2ResultList = new List<Tuple<int, int>>();
 
             for (var y = 0; y <= mapYMax; y++)
             {
@@ -37,30 +41,24 @@ namespace AoC2024_8
 
             foreach (var frequency in frequencies)
             {
-
                 var antennasWithRightFrequency = antennas.Where(x => x.Frequency == frequency.Key).ToList();
 
                 foreach (var headAntenna in antennasWithRightFrequency)
                 {
+                    p2ResultList.Add(headAntenna.Coordinates);
+
                     var headAntCoords = headAntenna.Coordinates;
 
                     foreach (var otherAntenna in antennasWithRightFrequency.Where(x => x.Coordinates.Item1 != headAntCoords.Item1 && x.Coordinates.Item2 != headAntCoords.Item2))
                     {
                         var othAntCoords = otherAntenna.Coordinates;
 
-                        var dx = othAntCoords.Item1 - headAntCoords.Item1;
-                        var dy = othAntCoords.Item2 - headAntCoords.Item2;
+                        var delta = ReturnNextPosition(headAntCoords.Item1, headAntCoords.Item2, othAntCoords.Item1, othAntCoords.Item2);
 
-                        //if (headAntCoords.Item1 == 8 && headAntCoords.Item2 == 3 && othAntCoords.Item1 == 9 &&
-                        //    othAntCoords.Item2 == 2)
-                        //{
-                        //    Console.WriteLine("");
-                        //}
+                        var antiNodePosX = delta.Item1 + othAntCoords.Item1;
+                        var antiNodePosY = delta.Item2 + othAntCoords.Item2;
 
-                        var antiNodePosX = dx + othAntCoords.Item1;
-                        var antiNodePosY = dy + othAntCoords.Item2;
-
-                        if (0 <= antiNodePosX && antiNodePosX <= mapXMax && 0 <= antiNodePosY && antiNodePosY <= mapYMax)
+                        if (part1 && 0 <= antiNodePosX && antiNodePosX <= mapXMax && 0 <= antiNodePosY && antiNodePosY <= mapYMax)
                         {
                             otherAntenna.Antinodes.Add(new AntiNode()
                             {
@@ -68,16 +66,55 @@ namespace AoC2024_8
                                 Coordinates = new Tuple<int, int>(antiNodePosX, antiNodePosY)
                             });
                         }
+                        else
+                        {
+                            var nextHeadX = headAntCoords.Item1;
+                            var nextHeadY = headAntCoords.Item2;
+                            var nextOtherX = othAntCoords.Item1;
+                            var nextOtherY = othAntCoords.Item2;
+                            var hasLeftMap = false;
 
+                            while (!hasLeftMap)
+                            {
+
+                                delta = ReturnNextPosition(nextHeadX, nextHeadY, nextOtherX, nextOtherY);
+
+                                nextHeadX = nextOtherX;
+                                nextHeadY = nextOtherY;
+
+                                antiNodePosX = delta.Item1 + nextOtherX;
+                                antiNodePosY = delta.Item2 + nextOtherY;
+
+                                nextOtherX = antiNodePosX;
+                                nextOtherY = antiNodePosY;
+
+                                if (0 <= antiNodePosX && antiNodePosX <= mapXMax && 0 <= antiNodePosY && antiNodePosY <= mapYMax)
+                                {
+                                    p2ResultList.Add(new Tuple<int, int>(antiNodePosX, antiNodePosY));
+                                }
+                                else
+                                {
+                                    hasLeftMap = true;
+                                }
+                                
+                            }
+                        }
                     }
                 }
-
             }
 
-            //p1
-            Console.WriteLine(antennas.SelectMany(a => a.Antinodes).DistinctBy(x => new { x.Coordinates.Item1, x.Coordinates.Item2 }).ToList().Count);
+            Console.WriteLine(part1
+                ? antennas.SelectMany(a => a.Antinodes)
+                    .DistinctBy(x => new { x.Coordinates.Item1, x.Coordinates.Item2 }).ToList().Count
+               : p2ResultList.DistinctBy(x => new { x.Item1, x.Item2 }).ToList().Count);
+        }
 
+        public static Tuple<int, int> ReturnNextPosition(int headCurrentX, int headCurrentY, int otherCurrentX, int otherCurrentY)
+        {
+            var dx = otherCurrentX - headCurrentX;
+            var dy = otherCurrentY - headCurrentY;
 
+            return new Tuple<int, int>(dx, dy);
         }
     }
 
