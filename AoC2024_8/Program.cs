@@ -60,7 +60,7 @@ namespace AoC2024_8
 
                         if (part1 && 0 <= antiNodePosX && antiNodePosX <= mapXMax && 0 <= antiNodePosY && antiNodePosY <= mapYMax)
                         {
-                            otherAntenna.Antinodes.Add(new AntiNode()
+                            otherAntenna.Antinodes.Add(new AntiNode
                             {
                                 AntiNodeForFrequency = frequency.Key,
                                 Coordinates = new Tuple<int, int>(antiNodePosX, antiNodePosY)
@@ -106,7 +106,7 @@ namespace AoC2024_8
             Console.WriteLine(part1
                 ? antennas.SelectMany(a => a.Antinodes)
                     .DistinctBy(x => new { x.Coordinates.Item1, x.Coordinates.Item2 }).ToList().Count
-               : p2ResultList.DistinctBy(x => new { x.Item1, x.Item2 }).ToList().Count);
+              : p2ResultList.DistinctBy(x => new { x.Item1, x.Item2 }).ToList().Count);
         }
 
         public static Tuple<int, int> ReturnNextPosition(int headCurrentX, int headCurrentY, int otherCurrentX, int otherCurrentY)
