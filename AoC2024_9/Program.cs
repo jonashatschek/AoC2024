@@ -1,6 +1,4 @@
 ﻿using System.Diagnostics;
-using System.Linq.Expressions;
-using System.Net.Http.Headers;
 
 namespace AoC2024_9
 {
@@ -11,12 +9,11 @@ namespace AoC2024_9
 			var timer = new Stopwatch();
 			timer.Start();
 
-			
 			var test = false;
 			var path = test ? "Test" : "Real";
 			var diskMap = File.ReadAllText($"{path}/input.txt").ToArray();
 			var id = 0;
-			string[] fileBlocks = [];
+			int[] fileBlocks = [];
 
 			for (int i = 0; i < diskMap.Length; i++)
 			{
@@ -30,6 +27,8 @@ namespace AoC2024_9
 
 			bool allSorted = false;
 			var indexOfLastInteger = fileBlocks.Length - 1;
+			var indexOfFirstDot = 0;
+			long checksum = 0;
 
 			//p1
 			while (!allSorted)
@@ -38,13 +37,11 @@ namespace AoC2024_9
 				//var indexOfFirstDot = Array.FindIndex(fileBlocks, x => x == ".");
 				//indexOfLastInteger = Array.FindLastIndex(fileBlocks, x => x != ".");
 
-
 				//faster
-				var indexOfFirstDot = 0;
 
 				for (; indexOfFirstDot < fileBlocks.Length; indexOfFirstDot++)
 				{
-					if (fileBlocks[indexOfFirstDot] == ".")
+					if (fileBlocks[indexOfFirstDot] < 0)
 					{
 						break;
 					}
@@ -52,7 +49,7 @@ namespace AoC2024_9
 
 				for (; indexOfLastInteger > 0; indexOfLastInteger--)
 				{
-					if (fileBlocks[indexOfLastInteger] != ".")
+					if (fileBlocks[indexOfLastInteger] > 0)
 					{
 						break;
 					}
@@ -65,39 +62,38 @@ namespace AoC2024_9
 				else
 				{
 					fileBlocks[indexOfFirstDot] = fileBlocks[indexOfLastInteger];
-					fileBlocks[indexOfLastInteger] = ".";
+					fileBlocks[indexOfLastInteger] = -1;
 				}
 			}
 
-			long checksum = 0;
-
 			for (int i = 0; i < indexOfLastInteger + 1; i++)
 			{
-				checksum += long.Parse(fileBlocks[i]) * i;
+				checksum += fileBlocks[i] * i;
 			}
 
+			timer.Stop();
 			Console.WriteLine($"Part1 time: {timer.ElapsedMilliseconds}");
 			Console.WriteLine(checksum);
 		}
 
-		public static string[] GetNewBlocks(string[] oldStuff, string toAdd, int currentIndex, int id)
+		public static int[] GetNewBlocks(int[] oldArray, string toAdd, int currentIndex, int id)
 		{
 			var toAddLength = int.Parse(toAdd);
-			var newStuff = new string[oldStuff.Length + toAddLength];
+			var newArray = new int[oldArray.Length + toAddLength];
 
-			if (oldStuff.Length > 0)
+			if (oldArray.Length > 0)
 			{
-				oldStuff.CopyTo(newStuff, 0);
+				oldArray.CopyTo(newArray, 0);
 			}
 
-			int whereToStart = oldStuff.Length > 0 ? oldStuff.Length : 0;
+			int whereToStart = oldArray.Length > 0 ? oldArray.Length : 0;
 
-			for (; whereToStart < newStuff.Length; whereToStart++)
+			for (; whereToStart < newArray.Length; whereToStart++)
 			{
-				newStuff[whereToStart] += currentIndex % 2 == 0 ? id : ".";
+				newArray[whereToStart] += currentIndex % 2 == 0 ? id : -1;
 			}
 
-			return newStuff;
+			return newArray;
 		}
 
 	}
