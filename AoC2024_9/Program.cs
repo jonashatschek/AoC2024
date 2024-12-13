@@ -7,7 +7,7 @@ namespace AoC2024_9
     {
         static void Main(string[] args)
         {
-            var test = false;
+            var test = true;
             var path = test ? "Test" : "Real";
             var diskMap = File.ReadAllText($"{path}/input.txt").ToArray();
             var id = 0;
@@ -29,10 +29,7 @@ namespace AoC2024_9
 			while (!allSorted)
             {
 				var indexOfFirstDot = Array.FindIndex(fileBlocks, x => x == ".");
-				
-                indexOfLastInteger = fileBlocks.Select((value, index) => new { value, index })
-	            .Where(x => int.TryParse(x.value, out _))
-	            .Select(x => x.index).Last();
+				indexOfLastInteger = Array.FindLastIndex(fileBlocks, x => x != ".");
 
                 if(indexOfFirstDot > indexOfLastInteger)
                 {
