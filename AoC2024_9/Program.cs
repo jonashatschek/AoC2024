@@ -26,6 +26,7 @@ namespace AoC2024_9
             bool allSorted = false;
 			var indexOfLastInteger = 0;
 
+            //p1
 			while (!allSorted)
             {
 				var indexOfFirstDot = Array.FindIndex(fileBlocks, x => x == ".");
@@ -44,7 +45,7 @@ namespace AoC2024_9
 
             long checksum = 0;
 
-            for(int i = 0; i < indexOfLastInteger + 1; i++)
+            for (int i = 0; i < indexOfLastInteger + 1; i++)
             {
                 long res = long.Parse(fileBlocks[i]) * i;
                 checksum += res;
@@ -55,15 +56,12 @@ namespace AoC2024_9
 
         public static string[] GetNewBlocks(string[] oldStuff, string toAdd, int currentIndex, int id)
         {
-
             var toAddLength = int.Parse(toAdd);
-
             var newStuff = new string[oldStuff.Length + toAddLength];
 
             if (oldStuff.Length > 0)
             {
                 oldStuff.CopyTo(newStuff, 0);
-
             }
 
             int whereToStart = oldStuff.Length > 0 ? oldStuff.Length : 0;
