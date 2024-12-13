@@ -7,86 +7,71 @@ namespace AoC2024_9
     {
         static void Main(string[] args)
         {
-            //The disk map uses a dense format to represent the layout of files and free space on the disk.
-            //The digits alternate between indicating the length of a file and the length of free space.
-
-            //So, a disk map like 12345 would represent a one-block file, two blocks of free space, a three-block file,
-            //four blocks of free space, and then a five-block file. A disk map like 90909 would represent three nine-block files in a row (with no free space between them).
-
-            var test = true;
+            var test = false;
             var path = test ? "Test" : "Real";
             var diskMap = File.ReadAllText($"{path}/input.txt").ToArray();
-            var nlaha = "";
             var id = 0;
-            string[] oldStuff = [];
+            string[] fileBlocks = [];
 
-            //todo sort string
             for (int i = 0; i < diskMap.Length; i++)
             {
-                //var newStuffLength = int.Parse(diskMap[i].ToString());
+                fileBlocks = GetNewBlocks(fileBlocks, diskMap[i].ToString(), i, id);
 
-                ////init new array with right length 
-                //var newStuff = new string[newStuffLength];
-
-                //for (int j = 0; j < newStuffLength; j++)
-                //{
-
-                //    newStuff[j] += i % 2 == 0 ? id : ".";
-                //}
-
-                //string[] tempOldStuff = new string[newStuffLength + oldStuff.Length];
-
-                //tempOldStuff.CopyTo(oldStuff, 0);
-                //tempOldStuff.CopyTo(newStuff, tempOldStuff.Length);
-
-                //if (i % 2 == 0)
-                //{
-                //    id++;
-                //}
-
-                oldStuff = GetNewStuff(oldStuff, diskMap[i].ToString(), i, id);
-
-                //oldStuff = new string[length + ];
-                Console.Write("sfga");
-                //if (i % 2 == 0)
-                //{
-                //    //this means it is a file
-
-
-                //}
-                //else
-                //{
-                //    //this means it is a free space
-
-                //}
-                //oldStuff.CopyTo(tempOldStuff, 0);
-
+				if (i % 2 == 0)
+				{
+					id++;
+				}
             }
 
+            bool allSorted = false;
+			var indexOfLastInteger = 0;
 
+			while (!allSorted)
+            {
+				var indexOfFirstDot = Array.FindIndex(fileBlocks, x => x == ".");
+				
+                indexOfLastInteger = fileBlocks.Select((value, index) => new { value, index })
+	            .Where(x => int.TryParse(x.value, out _))
+	            .Select(x => x.index).Last();
 
-            //todo find free space to replace
-            //todo find array index to replace it with
+                if(indexOfFirstDot > indexOfLastInteger)
+                {
+                    allSorted = true;
+                }
+                else
+                {
+                    fileBlocks[indexOfFirstDot] = fileBlocks[indexOfLastInteger];
+                    fileBlocks[indexOfLastInteger] = ".";
+                }
+			}
 
-            Console.WriteLine(nlaha);
+            long checksum = 0;
+
+            for(int i = 0; i < indexOfLastInteger + 1; i++)
+            {
+                long res = long.Parse(fileBlocks[i]) * i;
+                checksum += res;
+            }
+
+            Console.WriteLine(checksum);
         }
 
-        public static string[] GetNewStuff(string[] oldStuff, string toAdd, int currentIndex, int id)
+        public static string[] GetNewBlocks(string[] oldStuff, string toAdd, int currentIndex, int id)
         {
 
-            var newStuffLength = int.Parse(toAdd);
+            var toAddLength = int.Parse(toAdd);
 
-            var newStuff = new string[oldStuff.Length + newStuffLength];
+            var newStuff = new string[oldStuff.Length + toAddLength];
 
             if (oldStuff.Length > 0)
             {
-                newStuff.CopyTo(oldStuff, 0);
+                oldStuff.CopyTo(newStuff, 0);
 
             }
 
             int whereToStart = oldStuff.Length > 0 ? oldStuff.Length : 0;
 
-            for (; whereToStart < newStuffLength; whereToStart++)
+            for (; whereToStart < newStuff.Length; whereToStart++)
             {
                 newStuff[whereToStart] += currentIndex % 2 == 0 ? id : ".";
             }
@@ -94,6 +79,6 @@ namespace AoC2024_9
             return newStuff;
         }
 
-    }
+	}
 
 }
