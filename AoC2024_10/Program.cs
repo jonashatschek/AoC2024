@@ -20,4 +20,12 @@
 
 		}
 	}
+
+	public class TrailHead
+	{
+		public int[,] StartingPosition { get; set; }
+		public int[,] Visited { get; set; }
+
+
+	}
 }
