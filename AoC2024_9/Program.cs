@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
 
 namespace AoC2024_9
 {
@@ -9,7 +10,7 @@ namespace AoC2024_9
 			var timer = new Stopwatch();
 			timer.Start();
 
-			var test = false;
+			var test = true;
 			var path = test ? "Test" : "Real";
 			var diskMap = File.ReadAllText($"{path}/input.txt").ToArray();
 			var id = 0;
@@ -25,55 +26,121 @@ namespace AoC2024_9
 				}
 			}
 
-			bool allSorted = false;
+			bool p1AllSorted = false;
 			var indexOfLastInteger = fileBlocks.Length - 1;
 			var indexOfFirstDot = 0;
 			long checksum = 0;
 
-			//p1
-			while (!allSorted)
+			bool part1 = false;
+			if (part1)
 			{
-				//slower
-				//var indexOfFirstDot = Array.FindIndex(fileBlocks, x => x == ".");
-				//indexOfLastInteger = Array.FindLastIndex(fileBlocks, x => x != ".");
-
-				//faster
-
-				for (; indexOfFirstDot < fileBlocks.Length; indexOfFirstDot++)
+				while (!p1AllSorted)
 				{
-					if (fileBlocks[indexOfFirstDot] < 0)
+
+					for (; indexOfFirstDot < fileBlocks.Length; indexOfFirstDot++)
 					{
-						break;
+						if (fileBlocks[indexOfFirstDot] < 0)
+						{
+							break;
+						}
 					}
-				}
 
-				for (; indexOfLastInteger > 0; indexOfLastInteger--)
-				{
-					if (fileBlocks[indexOfLastInteger] > 0)
+					for (; indexOfLastInteger > 0; indexOfLastInteger--)
 					{
-						break;
+						if (fileBlocks[indexOfLastInteger] > 0)
+						{
+							break;
+						}
 					}
-				}
 
-				if (indexOfFirstDot > indexOfLastInteger)
-				{
-					allSorted = true;
-				}
-				else
-				{
-					fileBlocks[indexOfFirstDot] = fileBlocks[indexOfLastInteger];
-					fileBlocks[indexOfLastInteger] = -1;
+					if (indexOfFirstDot > indexOfLastInteger)
+					{
+						p1AllSorted = true;
+					}
+					else
+					{
+						fileBlocks[indexOfFirstDot] = fileBlocks[indexOfLastInteger];
+						fileBlocks[indexOfLastInteger] = -1;
+					}
 				}
 			}
 
-			for (int i = 0; i < indexOfLastInteger + 1; i++)
+			var part2 = true;
+
+			if (part2)
 			{
-				checksum += fileBlocks[i] * i;
+				var occupiedBlocks = fileBlocks.Select((x, i) => new { FileId = x, Block = i }).Where(x => x.FileId > 0).GroupBy(x => x.FileId).Select(x => x).ToList();
+				var occupiedBlocks2 = fileBlocks.Select((x, i) => new { FileId = x, Block = i }).Where(x => x.FileId > 0).Select(x => new { x.FileId, x.Block }).ToList();
+
+				for (int i = occupiedBlocks.Count() - 1; 0 <= i; i--)
+				{
+					var blockSize = occupiedBlocks[i].Count();
+
+					var freeBlocks = fileBlocks.Select((x, i) => new { FileId = x, Block = i }).Where(x => x.FileId == -1).Select(x => x.Block).ToList();
+
+					for (int j = 0; j < freeBlocks.Count() - 1; j++)
+					{
+
+						if (freeBlocks.Count() > j + blockSize)
+						{
+
+							if (freeBlocks[j + blockSize - 1] == freeBlocks[j] + blockSize - 1)
+							{
+								var freeBlockStartingElement = freeBlocks[j];
+								var occupiedBlockStartingElement = occupiedBlocks2.Where(x => x.FileId == i + 1).OrderBy(x => x.Block).Select(x => x.Block).FirstOrDefault();
+
+								if (freeBlockStartingElement < occupiedBlockStartingElement)
+								{
+									for (int k = freeBlockStartingElement; k < freeBlockStartingElement + blockSize; k++)
+									{
+										fileBlocks[k] = occupiedBlocks[i].Key;
+									}
+
+									for (int o = occupiedBlockStartingElement; o < occupiedBlockStartingElement + blockSize; o++)
+									{
+										fileBlocks[o] = -1;
+									}
+
+								}
+
+								break;
+							}
+
+						}
+
+					}
+
+				}
+
+			}
+
+
+			if (part1)
+			{
+				for (int i = 0; i < indexOfLastInteger + 1; i++)
+				{
+					checksum += fileBlocks[i] * i;
+				}
+
+
+				Console.WriteLine($"Part 1 result: {checksum}");
+			}
+
+			if (part2)
+			{
+				long p2checksum = 0;
+				foreach (var res in fileBlocks.Select((x, i) => new { FileId = x, Block = i }).Where(x => x.FileId > -1))
+				{
+					p2checksum += res.FileId * res.Block;
+				}
+
+				Console.WriteLine($"Part 2 result: {p2checksum}");
 			}
 
 			timer.Stop();
-			Console.WriteLine($"Part1 time: {timer.ElapsedMilliseconds}");
-			Console.WriteLine(checksum);
+
+			Console.WriteLine($"timer: {timer.ElapsedMilliseconds}");
+
 		}
 
 		public static int[] GetNewBlocks(int[] oldArray, string toAdd, int currentIndex, int id)
