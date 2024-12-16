@@ -131,7 +131,6 @@ namespace AoC2024_9
 
     }
 
-
     public class MemoryBlock
     {
         public int Id;
