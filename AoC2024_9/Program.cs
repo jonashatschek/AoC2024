@@ -1,168 +1,141 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 
 namespace AoC2024_9
 {
-	internal class Program
-	{
-		static void Main(string[] args)
-		{
-			var timer = new Stopwatch();
-			timer.Start();
+    internal class Program
+    { 
+        static void Main(string[] args)
+        {
 
-			var test = true;
-			var path = test ? "Test" : "Real";
-			var diskMap = File.ReadAllText($"{path}/input.txt").ToArray();
-			var id = 0;
-			int[] fileBlocks = [];
+            var timer = new Stopwatch();
+            timer.Start();
+            var useTestData = false;
+            var path = useTestData ? "Test" : "Real";
+            var diskMap = File.ReadAllText($"{path}/input.txt").ToArray();
 
-			for (int i = 0; i < diskMap.Length; i++)
-			{
-				fileBlocks = GetNewBlocks(fileBlocks, diskMap[i].ToString(), i, id);
+            var id = 0;
+            int currentIndex = 0;
+            var freeBlocks = new List<MemoryBlock>();
+            var occupiedBlocks = new List<MemoryBlock>();
 
-				if (i % 2 == 0)
-				{
-					id++;
-				}
-			}
+            for (int i = 0; i < diskMap.Length; i++)
+            {
+                var length = diskMap[i] - '0';
+                var list = i % 2 == 0 ? occupiedBlocks : freeBlocks;
 
-			bool p1AllSorted = false;
-			var indexOfLastInteger = fileBlocks.Length - 1;
-			var indexOfFirstDot = 0;
-			long checksum = 0;
+                if (length > 0)
+                {
+                    list.Add(new MemoryBlock { Id = id, Length = length, StartIndex = currentIndex });
+                }
 
-			bool part1 = false;
-			if (part1)
-			{
-				while (!p1AllSorted)
-				{
+                currentIndex += length;
+                if (i % 2 == 0)
+                {
+                    id++;
+                }
+            }
 
-					for (; indexOfFirstDot < fileBlocks.Length; indexOfFirstDot++)
-					{
-						if (fileBlocks[indexOfFirstDot] < 0)
-						{
-							break;
-						}
-					}
+            Part1(freeBlocks, occupiedBlocks);
 
-					for (; indexOfLastInteger > 0; indexOfLastInteger--)
-					{
-						if (fileBlocks[indexOfLastInteger] > 0)
-						{
-							break;
-						}
-					}
+            Part2(freeBlocks, occupiedBlocks);
+            
+            timer.Stop();
+            Console.WriteLine($"timer: {timer.ElapsedMilliseconds}");
+        }
 
-					if (indexOfFirstDot > indexOfLastInteger)
-					{
-						p1AllSorted = true;
-					}
-					else
-					{
-						fileBlocks[indexOfFirstDot] = fileBlocks[indexOfLastInteger];
-						fileBlocks[indexOfLastInteger] = -1;
-					}
-				}
-			}
+        public static int[] indexOfNextFreeMemoryOfSize = new int[10];
 
-			var part2 = true;
+        public static MemoryBlock FindNext(List<MemoryBlock> list, int length, int maxIndex)
+        {
+            for (int i = indexOfNextFreeMemoryOfSize[length]; i < list.Count; i++)
+            {
+                if (list[i].StartIndex > maxIndex)
+                    return null;
+                if (list[i].Length >= length)
+                {
+                    indexOfNextFreeMemoryOfSize[length] = i;
+                    return list[i];
+                }
+            }
+            return null;
+        }
 
-			if (part2)
-			{
-				var occupiedBlocks = fileBlocks.Select((x, i) => new { FileId = x, Block = i }).Where(x => x.FileId > 0).GroupBy(x => x.FileId).Select(x => x).ToList();
-				var occupiedBlocks2 = fileBlocks.Select((x, i) => new { FileId = x, Block = i }).Where(x => x.FileId > 0).Select(x => new { x.FileId, x.Block }).ToList();
+        public static void Part1(List<MemoryBlock> freeBlocks, List<MemoryBlock> occupiedBlocks)
+        {
+            decimal checksum = 0;
 
-				for (int i = occupiedBlocks.Count() - 1; 0 <= i; i--)
-				{
-					var blockSize = occupiedBlocks[i].Count();
+            while (true)
+            {
+                var lastOccupied = occupiedBlocks.Last();
+                var firstFreeBlock = freeBlocks.First();
 
-					var freeBlocks = fileBlocks.Select((x, i) => new { FileId = x, Block = i }).Where(x => x.FileId == -1).Select(x => x.Block).ToList();
+                if (firstFreeBlock.StartIndex > lastOccupied.StartIndex)
+                {
+                    break;
+                }
 
-					for (int j = 0; j < freeBlocks.Count() - 1; j++)
-					{
+                var lengthToMove = lastOccupied.Length;
 
-						if (freeBlocks.Count() > j + blockSize)
-						{
+                if (firstFreeBlock.Length < lengthToMove)
+                {
+                    lengthToMove = firstFreeBlock.Length;
+                }
 
-							if (freeBlocks[j + blockSize - 1] == freeBlocks[j] + blockSize - 1)
-							{
-								var freeBlockStartingElement = freeBlocks[j];
-								var occupiedBlockStartingElement = occupiedBlocks2.Where(x => x.FileId == i + 1).OrderBy(x => x.Block).Select(x => x.Block).FirstOrDefault();
+                checksum += (decimal)lastOccupied.Id * (firstFreeBlock.StartIndex * lengthToMove + (lengthToMove * (lengthToMove - 1)) / 2);
 
-								if (freeBlockStartingElement < occupiedBlockStartingElement)
-								{
-									for (int k = freeBlockStartingElement; k < freeBlockStartingElement + blockSize; k++)
-									{
-										fileBlocks[k] = occupiedBlocks[i].Key;
-									}
+                lastOccupied.Length -= lengthToMove;
+                firstFreeBlock.Length -= lengthToMove;
+                firstFreeBlock.StartIndex += lengthToMove;
 
-									for (int o = occupiedBlockStartingElement; o < occupiedBlockStartingElement + blockSize; o++)
-									{
-										fileBlocks[o] = -1;
-									}
+                if (lastOccupied.Length == 0)
+                {
+                    occupiedBlocks.RemoveAt(occupiedBlocks.Count - 1);
+                }
 
-								}
+                if (firstFreeBlock.Length == 0)
+                {
+                    freeBlocks.RemoveAt(0);
+                }
+            }
 
-								break;
-							}
+            checksum += occupiedBlocks.Sum(x => (decimal)x.Id * (x.StartIndex * x.Length + (x.Length * (x.Length - 1)) / 2));
 
-						}
+            Console.WriteLine($"Part 1 result: {checksum}");
+        }
 
-					}
+        public static void Part2(List<MemoryBlock> freeBlocks, List<MemoryBlock> occupiedBlocks)
+        {
+            decimal checksum = 0;
+            for (int i = occupiedBlocks.Count - 1; 0 <= i; i--)
+            {
+                var blockSize = occupiedBlocks[i].Length;
+                var availableFreeBlock = FindNext(freeBlocks, blockSize, occupiedBlocks[i].StartIndex);
 
-				}
+                if (availableFreeBlock == null)
+                {
+                    checksum += (decimal)(occupiedBlocks[i].Id) * (occupiedBlocks[i].StartIndex * occupiedBlocks[i].Length + (occupiedBlocks[i].Length * (occupiedBlocks[i].Length - 1)) / 2);
+                    continue;
+                }
 
-			}
+                checksum += (decimal)(occupiedBlocks[i].Id) * (availableFreeBlock.StartIndex * occupiedBlocks[i].Length + (occupiedBlocks[i].Length * (occupiedBlocks[i].Length - 1)) / 2);
+
+                for (int k = 0; k < blockSize; k++)
+                {
+                    availableFreeBlock.StartIndex++;
+                    availableFreeBlock.Length--;
+                }
+            }
+
+            Console.WriteLine($"Part 2 result: {checksum}");
+        }
+
+    }
 
 
-			if (part1)
-			{
-				for (int i = 0; i < indexOfLastInteger + 1; i++)
-				{
-					checksum += fileBlocks[i] * i;
-				}
-
-
-				Console.WriteLine($"Part 1 result: {checksum}");
-			}
-
-			if (part2)
-			{
-				long p2checksum = 0;
-				foreach (var res in fileBlocks.Select((x, i) => new { FileId = x, Block = i }).Where(x => x.FileId > -1))
-				{
-					p2checksum += res.FileId * res.Block;
-				}
-
-				Console.WriteLine($"Part 2 result: {p2checksum}");
-			}
-
-			timer.Stop();
-
-			Console.WriteLine($"timer: {timer.ElapsedMilliseconds}");
-
-		}
-
-		public static int[] GetNewBlocks(int[] oldArray, string toAdd, int currentIndex, int id)
-		{
-			var toAddLength = int.Parse(toAdd);
-			var newArray = new int[oldArray.Length + toAddLength];
-
-			if (oldArray.Length > 0)
-			{
-				oldArray.CopyTo(newArray, 0);
-			}
-
-			int whereToStart = oldArray.Length > 0 ? oldArray.Length : 0;
-
-			for (; whereToStart < newArray.Length; whereToStart++)
-			{
-				newArray[whereToStart] += currentIndex % 2 == 0 ? id : -1;
-			}
-
-			return newArray;
-		}
-
-	}
-
+    public class MemoryBlock
+    {
+        public int Id;
+        public int StartIndex;
+        public int Length;
+    }
 }
