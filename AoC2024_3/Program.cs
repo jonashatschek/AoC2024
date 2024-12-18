@@ -12,7 +12,7 @@ namespace AoC2024_3
 			//p1
 			var sum = GetSum(input);
 
-			var splitDoNot = input.Split("don't()", StringSplitOptions.None);
+			var splitDoNot = input.Split("don't()");
 
 			//p2
 			var p2Sum = 0;
@@ -25,7 +25,7 @@ namespace AoC2024_3
 				}
 				else
 				{
-					var splitDo = splitDoNot[j].Split("do()", StringSplitOptions.None);
+					var splitDo = splitDoNot[j].Split("do()");
 
 					for (int i = 1; i < splitDo.Length; i++)
 					{
