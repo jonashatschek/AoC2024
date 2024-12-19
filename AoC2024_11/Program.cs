@@ -16,12 +16,12 @@ namespace AoC2024_11
 
 			var numberOfBlinks = 75;
 
-			var stoneCounts = new ConcurrentDictionary<long, long>();
+			var stoneCounts = new Dictionary<long, long>();
 
-			foreach (var stone in input)
-			{
-				stoneCounts[stone] = stoneCounts.GetOrAdd(stone, 0) + 1;
-			}
+			foreach (var stone in input.Where(stone => !stoneCounts.TryAdd(stone, 1)))
+            {
+                stoneCounts[stone]++;
+            }
 
 			for (var y = 0; y < numberOfBlinks; y++)
 			{
@@ -31,14 +31,17 @@ namespace AoC2024_11
 					Console.WriteLine($"Part 1: {stoneCounts.Values.Sum()}");
 				}
 
-				var newStoneCounts = new ConcurrentDictionary<long, long>();
+				var newStoneCounts = new Dictionary<long, long>();
 
 				foreach (var (stone, count) in stoneCounts)
 				{
 					if (stone == 0)
 					{
-						newStoneCounts[1] = newStoneCounts.GetOrAdd(1, 0) + count;
-					}
+                        if (!newStoneCounts.TryAdd(1, count))
+                        {
+                            newStoneCounts[1] += count;
+                        }
+                    }
 					else
 					{
 						var stoneString = stone.ToString();
@@ -49,13 +52,25 @@ namespace AoC2024_11
 							var leftHalf = long.Parse(stoneString.Substring(0, mid));
 							var rightHalf = long.Parse(stoneString.Substring(mid));
 
-							newStoneCounts[leftHalf] = newStoneCounts.GetOrAdd(leftHalf, 0) + count;
-							newStoneCounts[rightHalf] = newStoneCounts.GetOrAdd(rightHalf, 0) + count;
+                            if (!newStoneCounts.TryAdd(leftHalf, count))
+                            {
+								newStoneCounts[leftHalf] += count;
+                            }
+
+                            if (!newStoneCounts.TryAdd(rightHalf, count))
+                            {
+								newStoneCounts[rightHalf] += count;
+                            }
+						
 						}
 						else
 						{
 							var multiplied = stone * 2024;
-							newStoneCounts[multiplied] = newStoneCounts.GetOrAdd(multiplied, 0) + count;
+
+                            if (!newStoneCounts.TryAdd(multiplied, count))
+                            {
+								newStoneCounts[multiplied] += count;
+                            }
 						}
 					}
 				}
