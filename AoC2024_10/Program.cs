@@ -70,10 +70,6 @@ namespace AoC2024_10
 			{
 				var newPoint = currentPoint + (direction[0] * 100) + direction[1];
 
-				//if(find == 9)
-				//{
-				//}
-
 				if (numbers[find].Contains(newPoint))
 				{
 					ExploreNeighbours(newPoint, find);
