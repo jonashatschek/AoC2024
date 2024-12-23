@@ -127,7 +127,6 @@ namespace AoC2024_12
 
 				var isOutsideMapEdges = adjacentY < 0 || adjacentY >= farm.Length || adjacentX < 0 || adjacentX >= farm[startingY].Length;
 				var isNeighbourSameAsCurrentPosition = false;
-				var isAlreadyAddedToCropArea = Regions.Any(x => x.Plants.Any(x => x.Coordinate.X == adjacentX && x.Coordinate.Y == adjacentY));
 
 				if (!isOutsideMapEdges)
 				{
@@ -140,7 +139,7 @@ namespace AoC2024_12
 					plant.Perimiters.Add(direction);
 				}
 
-				if (!isOutsideMapEdges && isNeighbourSameAsCurrentPosition && !isAlreadyAddedToCropArea && !Visited[adjacentX, adjacentY])
+				if (!isOutsideMapEdges && isNeighbourSameAsCurrentPosition && !Visited[adjacentX, adjacentY])
 				{
 					var newCrop = new Plant
 					{
