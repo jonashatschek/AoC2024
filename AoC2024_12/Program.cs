@@ -9,33 +9,44 @@ namespace AoC2024_12
 		public static bool useTestData = true;
 		public static string path = useTestData ? "Test" : "Real";
 		public static string[] farm = File.ReadAllLines($"{path}/input.txt").Reverse().ToArray();
-		public static List<int[]> Directions = [[1, 0], [-1, 0], [0, 1], [0, -1]]; //e, w, n, s
+		public static readonly int[,] Directions = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }; // e, w, n, s
 		public static int[] PerimiterTypes = [0, 1, 2, 3]; //e, w, n, s
+		public static bool[,] Visited;
 
 		static void Main(string[] args)
 		{
+			var timer = new Stopwatch();
+			timer.Start();
+			Visited = new bool[farm.Length, farm[0].Length];
+
 			for (var y = 0; y < farm.Length; y++)
 			{
 				var row = farm[y];
 				for (var x = 0; x < row.Length; x++)
 				{
-					var cropType = farm[y][x];
-					var crop = new Plant
+					var plant = new Plant
 					{
-						Coordinates = new Tuple<int, int>(x, y),
-						Type = cropType
+						Coordinate = new Coordinate(x, y),
+						Type = farm[y][x]
 					};
 
-					var isAlreadyAddedToCropArea = Regions.Any(cropArea => cropArea.Plants.Any(crop => crop.Coordinates.Item1 == x && crop.Coordinates.Item2 == y));
-
-					if (!isAlreadyAddedToCropArea)
+					if (!Visited[x, y])
 					{
-						var cropArea = CreateNewCropArea(farm[y][x]);
-						Regions.Add(cropArea);
-						MapAllCropsWithinArea(x, y, crop, cropArea);
+						var region = CreateNewPlantRegion(farm[y][x]);
+						Regions.Add(region);
+						Visited[x, y] = true;
+						MapAllCropsWithinArea(x, y, plant, region);
 					}
 				}
 			}
+
+			var p1Result = 0;
+			foreach (var region in Regions)
+			{
+				p1Result += region.Plants.Count * region.Perimiter;
+			}
+			Console.WriteLine($"Time (ms): {timer.ElapsedMilliseconds}");
+			Console.WriteLine($"part 1: {p1Result}");
 
 			foreach (var region in Regions)
 			{
@@ -49,31 +60,31 @@ namespace AoC2024_12
 
 					if (perimiterType == 0 || perimiterType == 1)
 					{
-						var perimitersOnSameRow = plantsInRegionWithSameDirection.OrderBy(plants => plants.Coordinates.Item2)
-							.GroupBy(plants => plants.Coordinates.Item1).Where(plants => plants.Count() > 1)
-							.Select(x => x.Select(x => x.Coordinates)).ToList();
+						var perimitersOnSameRow = plantsInRegionWithSameDirection.OrderBy(plants => plants.Coordinate.Y)
+							.GroupBy(plants => plants.Coordinate.X).Where(plants => plants.Count() > 1)
+							.Select(x => x.Select(x => x.Coordinate)).ToList();
 
-						splitBySides = perimitersOnSameRow.Select(x => x.Select(x => x.Item2)
+						splitBySides = perimitersOnSameRow.Select(x => x.Select(x => x.Y)
 								.Select((value, index) => new { value, groupKey = value - index })
 								.GroupBy(x => x.groupKey)
 								.Select(group => group.Select(x => x.value))).ToList();
 
-						solitarySidePerimiter = plantsInRegionWithSameDirection.GroupBy(plants => plants.Coordinates.Item1)
+						solitarySidePerimiter = plantsInRegionWithSameDirection.GroupBy(plants => plants.Coordinate.X)
 							.Where(plants => plants.Count() == 1).Count();
 
 					}
 
 					if (perimiterType == 2 || perimiterType == 3)
 					{
-						var perimitersOnSameRow = plantsInRegionWithSameDirection.OrderBy(plants => plants.Coordinates.Item1)
-							.GroupBy(plants => plants.Coordinates.Item2).Where(plants => plants.Count() > 1).Select(x => x.Select(x => x.Coordinates)).ToList();
+						var perimitersOnSameRow = plantsInRegionWithSameDirection.OrderBy(plants => plants.Coordinate.X)
+							.GroupBy(plants => plants.Coordinate.Y).Where(plants => plants.Count() > 1).Select(x => x.Select(x => x.Coordinate)).ToList();
 
-						splitBySides = perimitersOnSameRow.Select(x => x.Select(x => x.Item1)
+						splitBySides = perimitersOnSameRow.Select(x => x.Select(x => x.X)
 						.Select((value, index) => new { value, groupKey = value - index })
 						.GroupBy(x => x.groupKey)
 						.Select(group => group.Select(x => x.value))).ToList();
 
-						solitarySidePerimiter = plantsInRegionWithSameDirection.GroupBy(plants => plants.Coordinates.Item2)
+						solitarySidePerimiter = plantsInRegionWithSameDirection.GroupBy(plants => plants.Coordinate.Y)
 							.Where(plants => plants.Count() == 1).Count();
 
 					}
@@ -90,35 +101,33 @@ namespace AoC2024_12
 				}
 			}
 
-			var p1Result = 0;
 			var p2Result = 0;
 			foreach (var region in Regions)
 			{
-				p1Result += region.Plants.Count * region.Perimiter;
 				p2Result += region.Sides * region.Plants.Count;
 			}
 
-			Console.WriteLine($"part 1: {p1Result}");
-			Console.WriteLine($"part 2: {p2Result}");
+			timer.Stop();
 
+			Console.WriteLine($"Time (ms): {timer.ElapsedMilliseconds}");
+			Console.WriteLine($"part 2: {p2Result}");
 		}
 
 		public static void MapAllCropsWithinArea(int startingX, int startingY, Plant plant, Region region)
 		{
 			region.Plants.Add(plant);
 
-
 			for (int direction = 0; direction < 4; direction++)
 			{
-				var dx = Directions[direction][0];
-				var dy = Directions[direction][1];
+				var dx = Directions[direction, 0];
+				var dy = Directions[direction, 1];
 
 				var adjacentX = dx + startingX;
 				var adjacentY = dy + startingY;
 
 				var isOutsideMapEdges = adjacentY < 0 || adjacentY >= farm.Length || adjacentX < 0 || adjacentX >= farm[startingY].Length;
 				var isNeighbourSameAsCurrentPosition = false;
-				var isAlreadyAddedToCropArea = Regions.Any(x => x.Plants.Any(x => x.Coordinates.Item1 == adjacentX && x.Coordinates.Item2 == adjacentY));
+				var isAlreadyAddedToCropArea = Regions.Any(x => x.Plants.Any(x => x.Coordinate.X == adjacentX && x.Coordinate.Y == adjacentY));
 
 				if (!isOutsideMapEdges)
 				{
@@ -131,22 +140,21 @@ namespace AoC2024_12
 					plant.Perimiters.Add(direction);
 				}
 
-				if (!isOutsideMapEdges && isNeighbourSameAsCurrentPosition && !isAlreadyAddedToCropArea)
+				if (!isOutsideMapEdges && isNeighbourSameAsCurrentPosition && !isAlreadyAddedToCropArea && !Visited[adjacentX, adjacentY])
 				{
 					var newCrop = new Plant
 					{
-						Coordinates = new Tuple<int, int>(adjacentX, adjacentY),
+						Coordinate = new Coordinate(adjacentX, adjacentY),
 						Type = farm[startingY][startingX]
 					};
+					Visited[adjacentX, adjacentY] = true;
 
 					MapAllCropsWithinArea(adjacentX, adjacentY, newCrop, region);
 				}
-
 			}
-
 		}
 
-		public static Region CreateNewCropArea(char type)
+		public static Region CreateNewPlantRegion(char type)
 		{
 			var identifier = 0;
 
@@ -164,9 +172,17 @@ namespace AoC2024_12
 		}
 	}
 
+
+	public struct Coordinate
+	{
+		public int X { get; set; }
+		public int Y { get; set; }
+		public Coordinate(int x, int y) { X = x; Y = y; }
+	}
+
 	public class Plant
 	{
-		public Tuple<int, int> Coordinates { get; set; }
+		public Coordinate Coordinate { get; set; }
 		public char Type { get; set; }
 		public List<int> Perimiters = new List<int>();
 	}
