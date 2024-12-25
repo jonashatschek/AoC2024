@@ -11,65 +11,55 @@ namespace AoC2024_13
 		public static string path = useTestData ? "Test" : "Real";
 		public static string[] input = File.ReadAllLines($"{path}/input.txt").Where(x => !string.IsNullOrWhiteSpace(x)).ToArray();
 
-
 		static void Main(string[] args)
 		{
 			long p1Result = 0;
 			long p2Result = 0;
 
 			var findDigitsRegex = @"\d+";
-			var clawMachines = new List<ClawMachine>();
-			for (int i = 0; i < input.Length - 2; i+=3)
+			double[] clawMachineResult;
+
+			for (int part = 1; part <= 2; part++)
 			{
-				var clawMachine = new ClawMachine();
-
-				for (int j = i; j < i + 3; j++)
+				for (int j = 0; j < input.Length; j += 3)
 				{
-					var digits = Regex.Matches(input[j], findDigitsRegex);
-					var x = int.Parse(digits[0].Value);
-					var y = int.Parse(digits[1].Value);
-					var test = input[j]; 
+					var buttonA = Regex.Matches(input[j], findDigitsRegex);
+					var buttonB = Regex.Matches(input[j + 1], findDigitsRegex);
+					var prize = Regex.Matches(input[j + 2], findDigitsRegex);
 
-					if (input[j].StartsWith("Button B"))
-					{
-						clawMachine.ButtonB = new Coordinate(x, y);
-					}
-					else if (input[j].StartsWith("Prize"))
-					{
-						clawMachine.Prize = new Coordinate(x + 10000000000000, y + 10000000000000);
-					}
-					else
-					{
-						clawMachine.ButtonA = new Coordinate(x, y);
-					}
-				}
+					var clawMachine = new ClawMachine();
 
-				var res = GetShortestDistance(clawMachine.ButtonA, clawMachine.ButtonB, clawMachine.Prize);
-				var a = res[0];
-				var b = res[1];
+					clawMachine.ButtonA = new Coordinate(int.Parse(buttonA[0].Value), int.Parse(buttonA[1].Value));
+					clawMachine.ButtonB = new Coordinate(int.Parse(buttonB[0].Value), int.Parse(buttonB[1].Value));
+					clawMachine.Prize = new Coordinate(
+						part == 1 ? int.Parse(prize[0].Value) : int.Parse(prize[0].Value) + 10000000000000,
+						part == 1 ? int.Parse(prize[1].Value) : int.Parse(prize[1].Value) + 10000000000000);
 
-				//p1
-				if (a % 1 == 0 && a <= 100 && b % 1 == 0 && b <= 100)
-				{
-					p1Result += (long) res[0] * 3;
-					p1Result += (long) res[1];
-				}
-				
-				//p2
-				if (a % 1 == 0 && b % 1 == 0)
-				{
-					p2Result += (long)res[0] * 3;
-					p2Result += (long)res[1];
+
+					clawMachineResult = GetShortestDistance(clawMachine.ButtonA, clawMachine.ButtonB, clawMachine.Prize);
+
+					var a = clawMachineResult[0];
+					var b = clawMachineResult[1];
+
+					//p1
+					if (part == 1 && a % 1 == 0 && a <= 100 && b % 1 == 0 && b <= 100)
+					{
+						p1Result += (long)clawMachineResult[0] * 3;
+						p1Result += (long)clawMachineResult[1];
+					}
+
+					//p2
+					if (part == 2 && a % 1 == 0 && b % 1 == 0)
+					{
+						p2Result += (long)clawMachineResult[0] * 3;
+						p2Result += (long)clawMachineResult[1];
+					}
 				}
 			}
 
-
 			Console.WriteLine(p1Result);
-
 			Console.WriteLine(p2Result);
-
 		}
-
 
 		public static double[] GetShortestDistance(Coordinate buttonA, Coordinate buttonB, Coordinate prize)
 		{
@@ -79,8 +69,6 @@ namespace AoC2024_13
 			return [a, b];
 		}
 	}
-	
-
 
 	public class ClawMachine()
 	{
@@ -88,7 +76,6 @@ namespace AoC2024_13
 		public Coordinate ButtonB { get; set; }
 		public Coordinate Prize { get; set; }
 	}
-
 
 	public struct Coordinate
 	{
