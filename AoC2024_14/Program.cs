@@ -3,171 +3,148 @@ using System.Text.RegularExpressions;
 
 namespace AoC2024_14
 {
-	internal class Program
-	{
-		private const bool useTestInput = false;
-		private static List<Robot> robots = [];
-		private const int width = useTestInput ? 11 : 101;
-		private const int height = useTestInput ? 7 : 103;
+    internal class Program
+    {
+        private const bool useTestInput = false;
+        private static Dictionary<long[], long[]> robots = new();
+        private const int width = useTestInput ? 11 : 101;
+        private const int height = useTestInput ? 7 : 103;
 
-		static void Main(string[] args)
-		{
-			var path = useTestInput ? "Test" : "Real";
-			var input = File.ReadAllLines($"{path}/input.txt");
-			var findDigitsRegex = @"-?\d+";
+        static void Main(string[] args)
+        {
+            var path = useTestInput ? "Test" : "Real";
+            var input = File.ReadAllLines($"{path}/input.txt");
+            var findDigitsRegex = @"-?\d+";
 
-			var p1Timer = new Stopwatch();
-			p1Timer.Start();
+            var p1Timer = new Stopwatch();
+            p1Timer.Start();
 
-			var p2Timer = new Stopwatch();
-			p2Timer.Start();
+            var p2Timer = new Stopwatch();
+            p2Timer.Start();
+            
+            foreach (var line in input)
+            {
+                var digits = Regex.Matches(line, findDigitsRegex);
+                for (int i = 0; i < 1; i++)
+                {
+                    var posX = long.Parse(digits[i].Value);
+                    var posY = long.Parse(digits[i + 1].Value);
+                    long[] position = [posX, posY];
 
+                    var velX = long.Parse(digits[i + 2].Value);
+                    var velY = long.Parse(digits[i + 3].Value);
+                    long[] velocities = [velX, velY];
 
-			foreach (var line in input)
-			{
-				var digits = Regex.Matches(line, findDigitsRegex);
-				for (int i = 0; i < 1; i++)
-				{
-					var posX = long.Parse(digits[i].Value);
-					var posY = long.Parse(digits[i + 1].Value);
-					var position = new Coordinate(posX, posY);
+                    robots.Add(velocities, position);
+                }
+            }
 
-					var velX = long.Parse(digits[i + 2].Value);
-					var velY = long.Parse(digits[i + 3].Value);
-					var velocities = new Coordinate(velX, velY);
+            var foundChristmasTree = false;
+            double p1Answer = 0;
+            for (int seconds = 1; !foundChristmasTree; seconds++)
+            {
 
-					robots.Add(new Robot(position, velocities));
-				}
-			}
+                foreach (var robot in robots)
+                {
+                    robots[robot.Key] = GetNewPosition(robot.Value, robot.Key);
+                }
 
-			var foundChristmasTree = false;
-			double p1Answer = 0;
-			for (int seconds = 1; !foundChristmasTree; seconds++)
-			{
+                //p1
+                if (seconds == 100)
+                {
+                    var middleWidth = width / 2;
+                    var middleHeigth = height / 2;
 
-				foreach (var robot in robots)
-				{
-					robot.Position = GetNewPosition(robot.Position, robot.Velocities);
-				}
+                    var topLeft = robots.Count(p => p.Value[0] < middleWidth && p.Value[1] < middleHeigth);
+                    var topRight = robots.Count(p => p.Value[0] > middleWidth && p.Value[1] < middleHeigth);
+                    var bottomLeft = robots.Count(p => p.Value[0] < middleWidth && p.Value[1] > middleHeigth);
+                    var bottomRight = robots.Count(p => p.Value[0] > middleWidth && p.Value[1] > middleHeigth);
 
-				//p1
-				if (seconds == 100)
-				{
-					var middleWidth = width / 2;
-					var middleHeigth = height / 2;
+                    p1Answer = topLeft * topRight * bottomLeft * bottomRight;
 
-					var topLeft = robots.Count(p => p.Position.X < middleWidth && p.Position.Y < middleHeigth);
-					var topRight = robots.Count(p => p.Position.X > middleWidth && p.Position.Y < middleHeigth);
-					var bottomLeft = robots.Count(p => p.Position.X < middleWidth && p.Position.Y > middleHeigth);
-					var bottomRight = robots.Count(p => p.Position.X > middleWidth && p.Position.Y > middleHeigth);
+                    p1Timer.Stop();
+                }
 
-					p1Answer = topLeft * topRight * bottomLeft * bottomRight;
+                //p2
+                var robotPositions = robots.Select(x => x.Value).ToArray();
+                foreach (var robotPositionRows in robotPositions.OrderBy(y => y[0]).GroupBy(y => y[1]).Where(y => y.Count() > 6).Select(x => x).ToList())
+                {
+                    var possibles = robotPositionRows.Where(y => y[1] == robotPositionRows.Key).ToList();
 
-					p1Timer.Stop();
-				}
+                    foreach (var possible in possibles)
+                    {
+                        foundChristmasTree = IsPartOfXmasTree(possible, possibles);
 
-				//p2
-				var robotPositions = robots.Select(x => x.Position).ToArray();
-				foreach (var robotPositionRows in robotPositions.OrderBy(y => y.X).GroupBy(y => y.Y).Where(y => y.Count() > 6).Select(x => x).ToList())
-				{
-					var possibles = robotPositionRows.Where(y => y.Y == robotPositionRows.Key).ToList();
+                        if (foundChristmasTree)
+                        {
+                            break;
+                        }
+                    }
+                }
 
-					foreach (var possible in possibles)
-					{
-						foundChristmasTree = IsPartOfXmasTree(possible, possibles);
+                if (foundChristmasTree)
+                {
+                    DrawCurrentPositions();
+                    p2Timer.Stop();
+                    Console.WriteLine($"\nPart 1: {p1Answer}\nTime p1: {p1Timer.ElapsedMilliseconds} ms\n");
+                    Console.WriteLine($"Part 2: {seconds} seconds\nTime p2: {p2Timer.ElapsedMilliseconds} ms");
+                    break;
+                }
+            }
+        }
 
-						if (foundChristmasTree)
-						{
-							break;
-						}
-					}
-				}
+        public static void DrawCurrentPositions()
+        {
+            var robotPositions = robots.Select(x => x.Value).ToList();
 
-				if (foundChristmasTree)
-				{
-					DrawCurrentPositions();
-					p2Timer.Stop();
-					Console.WriteLine($"\nPart 1: {p1Answer}\nTime p1: {p1Timer.ElapsedMilliseconds} ms\n");
-					Console.WriteLine($"Part 2: {seconds} seconds\nTime p2: {p2Timer.ElapsedMilliseconds} ms");
-					break;
-				}
-			}
+            for (int y = 0; y <= height; y++)
+            {
+                string toAdd = "";
+                for (int x = 0; x <= width; x++)
+                {
 
-		}
+                    if (robotPositions.Any(p => p[0] == x && p[1] == y))
+                    {
+                        toAdd += "X";
+                    }
+                    else
+                    {
+                        toAdd += ".";
+                    }
+                }
 
-		public static void DrawCurrentPositions()
-		{
-			var robotPositions = robots.Select(x => x.Position).ToList();
+                Console.WriteLine(toAdd);
+            }
+        }
 
-			for (int y = 0; y <= height; y++)
-			{
-				string toAdd = "";
-				for (int x = 0; x <= width; x++)
-				{
+        public static bool IsPartOfXmasTree(long[] coordinates, List<long[]> possibles)
+        {
+            for (long dx = 0; dx < 8; dx++)
+            {
+                if (!possibles.Any(robot => robot[0] == coordinates[0] + dx && robot[1] == coordinates[1]))
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
 
-					if (robotPositions.Any(p => p.X == x && p.Y == y))
-					{
-						toAdd += "X";
-					}
-					else
-					{
-						toAdd += ".";
-					}
-				}
+        public static long[] GetNewPosition(long[] currentPosition, long[] velocities)
+        {
+            var newX = (currentPosition[0] + velocities[0]) % width;
+            var newY = (currentPosition[1] + velocities[1]) % height;
 
-				Console.WriteLine(toAdd);
+            if (newX < 0)
+            {
+                newX += width;
+            }
 
-			}
-		}
+            if (newY < 0)
+            {
+                newY += height;
+            }
 
-		public static bool IsPartOfXmasTree(Coordinate coordinates, List<Coordinate> possibles)
-		{
-			for (long dx = 0; dx < 8; dx++)
-			{
-				if (!possibles.Any(robot => robot.X == coordinates.X + dx && robot.Y == coordinates.Y))
-				{
-					return false;
-				}
-			}
-			return true;
-		}
-
-		public static Coordinate GetNewPosition(Coordinate currentPosition, Coordinate velocities)
-		{
-			var newX = (currentPosition.X + velocities.X) % width;
-			var newY = (currentPosition.Y + velocities.Y) % height;
-
-			if (newX < 0)
-			{
-				newX += width;
-			}
-
-			if (newY < 0)
-			{
-				newY += height;
-			}
-
-			return new Coordinate(newX, newY);
-		}
-	}
-
-	public class Robot
-	{
-		public Coordinate Position { get; set; }
-		public Coordinate Velocities { get; set; }
-
-		public Robot(Coordinate startPosition, Coordinate velocities)
-		{
-			Position = startPosition;
-			Velocities = velocities;
-		}
-	}
-
-	public struct Coordinate
-	{
-		public double X { get; set; }
-		public double Y { get; set; }
-		public Coordinate(double x, double y) { X = x; Y = y; }
-	}
-
+            return [newX, newY];
+        }
+    }
 }

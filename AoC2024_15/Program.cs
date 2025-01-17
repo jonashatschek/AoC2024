@@ -1,31 +1,33 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Text;
 
 namespace AoC2024_15
 {
 	internal class Program
 	{
-		private const bool useTestInput = false;
+		private const bool useTestInput = true;
 		private static string[]? map;
-		public static readonly int[,] Directions = { { 1, 0 }, { -1, 0 }, { 0, -1 }, { 0, 1 } }; // e, w, s, n
+		public static readonly List<int[]> Directions = [[0, 1], [1, 0], [0, -1], [-1, 0] ]; // n, e, s, w
 
 		static void Main(string[] args)
 		{
-			//var mapped = new List<MapEntity>();
-
-			//move in direction
-
-			//find direction
-			//find nearest '.' in direction
-			//find nearest wall (#) in that direction. If there's a '.' between here and the wall, we can move.
-			//also need to move boxes (O)
 
 			var path = useTestInput ? "Test" : "Real";
 			map = File.ReadAllLines($"{path}/map.txt");
-			var replacedDirections = File.ReadAllText($"{path}/directions.txt").Replace('>', '0').Replace('<', '1').Replace('^', '2').Replace('v', '3');
-			MapEntity? robot = null;
+			var replacedDirections = File.ReadAllText($"{path}/directions.txt").Replace('v', '0').Replace('>', '1').Replace('^', '2').Replace('<', '3');
+            int[] robot = [];
 			var intDirections = new List<int>();
-			foreach (char i in replacedDirections)
+            var timer = new Stopwatch();
+            timer.Start();
+
+			//p2
+			//If the tile is #, the new map contains ## instead.
+			// If the tile is O, the new map contains [] instead.
+			// If the tile is ., the new map contains .. instead.
+			// If the tile is @, the new map contains @. instead.
+
+            foreach (char i in replacedDirections)
 			{
 				if (i != '\n' && i != '\r')
 				{
@@ -37,191 +39,169 @@ namespace AoC2024_15
 			{
 				if (map[y].IndexOf('@') > 0)
 				{
-					robot = new MapEntity(new Coordinate(map[y].IndexOf('@'), y), Type.robot);
+					robot = [map[y].IndexOf('@'), y];
 				}
 			}
 
 			foreach (var direction in intDirections)
 			{
 
-				// 0 = e, 1 = w, 2 = n, 3 = s
+				var closestDot = GetPositionOfClosestCharacter('.', direction, robot);
 
-				var closestDot = GetPositionOfClosestCharacter('.', direction, robot.Position);
-
-				if (closestDot.HasValue)
+				if (closestDot != null)
 				{
-					var distanceToDot = GetDistanceBetween(robot.Position, closestDot.Value);
+					var distanceToDot = GetDistanceBetween(robot, closestDot);
 
 					if (distanceToDot == 1)
 					{
-						Move('@', robot.Position, closestDot.Value);
-						robot.Position = closestDot.Value;
+						Move('@', robot, closestDot);
+						robot = closestDot;
 					}
 					else
 					{
-						var closestWall = GetPositionOfClosestCharacter('#', direction, robot.Position);
+						var closestWall = GetPositionOfClosestCharacter('#', direction, robot);
 
-						if (closestWall.HasValue)
+						if (closestWall != null)
 						{
-							var distanceToWall = GetDistanceBetween(robot.Position, closestWall.Value);
+							var distanceToWall = GetDistanceBetween(robot, closestWall);
 
 							if (distanceToDot < distanceToWall)
 							{
 
-								//If there are O's in direction between here and the '.' they move
-								//in this case there are definitely O's
-								//Move('O', new Coordinate(robot.))
 
 								var numberOfBoxes = distanceToDot - 1;
 
 								for (var boxesLeft = numberOfBoxes; boxesLeft >= 1; boxesLeft--)
 								{
-									Coordinate moveBoxFrom;
+									int[] moveBoxFrom;
 
 									switch (direction)
 									{
 										case 0:
-											moveBoxFrom = new Coordinate(robot.Position.X + boxesLeft, robot.Position.Y);
-											break;
+                                            moveBoxFrom = [robot[0], robot[1] + boxesLeft];
+                                            break;
 										case 1:
-											moveBoxFrom = new Coordinate(robot.Position.X - boxesLeft, robot.Position.Y);
-											break;
+                                            moveBoxFrom = [robot[0] + boxesLeft, robot[1]];
+                                            break;
 										case 2:
-											moveBoxFrom = new Coordinate(robot.Position.X, robot.Position.Y - boxesLeft);
-											break;
+                                            moveBoxFrom = [robot[0], robot[1] - boxesLeft];
+                                            break;
 										default:
-											moveBoxFrom = new Coordinate(robot.Position.X, robot.Position.Y + boxesLeft);
+											moveBoxFrom = [robot[0] - boxesLeft, robot[1]];
 											break;
 									}
 
-									var moveBoxTo = new Coordinate(moveBoxFrom.X + Directions[direction, 0], moveBoxFrom.Y + Directions[direction, 1]);
-
+                                    int[] moveBoxTo = [moveBoxFrom[0] + Directions[direction][0], moveBoxFrom[1] + Directions[direction][1]];
+                                    
 									Move('O', moveBoxFrom, moveBoxTo);
 								}
 
-								closestDot = GetPositionOfClosestCharacter('.', direction, robot.Position);
-								Move('@', robot.Position, closestDot.Value);
-								robot.Position = closestDot.Value;
+								closestDot = GetPositionOfClosestCharacter('.', direction, robot);
+								Move('@', robot, closestDot);
+								robot = closestDot;
 
 							}
 						}
 					}
 				}
 
-				var stringDirection = direction == 0 ? "east" : direction == 1 ? "west" : direction == 2 ? "north" : "south";
+				//var stringDirection = direction == 0 ? "east" : direction == 1 ? "west" : direction == 2 ? "north" : "south";
 
-				// 0 = e, 1 = w, 2 = n, 3 = s
+            }
 
-
-
-			}
-
-			double score = 0;
+            timer.Stop();
+            
+            double p1Score = 0;
 			for (int y = 0; y < map.Length; y++)
 			{
-				string toAdd = "";
-
-				for (int x = 0; x < map[y].Length; x++)
+                for (int x = 0; x < map[y].Length; x++)
 				{
 					if (map[y][x] == 'O')
 					{
-						score += CountScore(new Coordinate(x, y), false);
-					}
-					toAdd += map[y][x];
+                        p1Score += 100 * y + x;
+                    }
 				}
-
-				Console.WriteLine(toAdd);
-
+				Console.WriteLine(map[y]);
 			}
 
-			Console.WriteLine($"Score: {score}");
 
-			Console.WriteLine();
 
+			Console.WriteLine($"Timer: {timer.ElapsedMilliseconds} ms, part 1:{p1Score}");
+			
 			Console.ReadKey();
 
 		}
 
-		public static int CountScore(Coordinate boxCoordinate, bool part2)
+		public static int GetDistanceBetween(int[] a, int[] b)
 		{
-			var distanceToTopWall = GetPositionOfClosestCharacter('#', 2, boxCoordinate).Value.X;
-			var distanceToLeftWall = GetPositionOfClosestCharacter('#', 1, boxCoordinate).Value.Y;
-
-			if (part2)
-			{
-				distanceToLeftWall++;
-			}
-
-			return 100 * distanceToLeftWall + distanceToTopWall;
+			return Math.Abs(a[0] - b[0]) + Math.Abs(a[1] - b[1]);
 		}
 
-		public static int GetDistanceBetween(Coordinate a, Coordinate b)
+		public static void Move(char character, int[] from, int[] to)
 		{
-			return Math.Abs(a.X - b.X) + Math.Abs(a.Y - b.Y);
+			var toRow = map[to[1]].ToCharArray();
+			toRow[to[0]] = character;
+			map[to[1]] = new string(toRow);
+
+			var fromRow = map[from[1]].ToCharArray();
+			fromRow[from[0]] = '.';
+			map[from[1]] = new string(fromRow);
 		}
 
-		public static void Move(char character, Coordinate from, Coordinate to)
-		{
-			var toRow = map[to.Y].ToCharArray();
-			toRow[to.X] = character;
-			map[to.Y] = new string(toRow);
 
-			var fromRow = map[from.Y].ToCharArray();
-			fromRow[from.X] = '.';
-			map[from.Y] = new string(fromRow);
-		}
-
-		public static Coordinate? GetPositionOfClosestCharacter(char character, int direction, Coordinate position)
+		public static int[]? GetPositionOfClosestCharacter(char character, int direction, int[] position)
 		{
+
 			if (direction == 0)
 			{
-				var currentRow = map[position.Y];
-				var indexOfClosest = currentRow.Substring(position.X).IndexOf(character) + position.X;
+                //n
+                for (int y = position[1]; y <= map.Length - 1; y++)
+                {
+                    char? pivot = map[y][position[0]];
 
-				if (indexOfClosest != -1 && indexOfClosest > position.X)
-				{
-					return new Coordinate(indexOfClosest, position.Y);
-				}
+                    if (pivot == character)
+                    {
+                        return [position[0], y];
+                    }
+                }
 
-			}
+            }
 			else if (direction == 1)
 			{
-				var currentRow = map[position.Y];
-				var indexOfClosest = currentRow.Substring(0, position.X).LastIndexOf(character);
 
-				if (indexOfClosest != -1)
-				{
-					return new Coordinate(indexOfClosest, position.Y);
-				}
+				//e
+                var currentRow = map[position[1]];
+                var indexOfClosest = currentRow.Substring(position[0]).IndexOf(character) + position[0];
+
+                if (indexOfClosest != -1 && indexOfClosest > position[0])
+                {
+                    return [indexOfClosest, position[1]];
+                }
+                
 			}
 			else if (direction == 2)
 			{
-
-				for (int y = position.Y; y >= 0; y--)
-				{
-
-					char? pivot = map[y][position.X];
-					if (pivot == character)
-					{
-						var found = new Coordinate(position.X, y);
-						y = -1;
-						return found;
-					}
-				}
-			}
+				//s
+                for (int y = position[1]; y >= 0; y--)
+                {
+                    char? pivot = map[y][position[0]];
+                    if (pivot == character)
+                    {
+                        return [position[0], y];
+                    }
+                }
+                
+            }
 			else
 			{
-				for (int y = position.Y; y <= map.Length - 1; y++)
-				{
-					char? pivot = map[y][position.X];
+				//w
+                var currentRow = map[position[1]];
+                var indexOfClosest = currentRow.Substring(0, position[0]).LastIndexOf(character);
 
-					if (pivot == character)
-					{
-						var found = new Coordinate(position.X, y);
-						y = map.Length;
-						return found;
-					}
-				}
+                if (indexOfClosest != -1)
+                {
+                    return [indexOfClosest, position[1]];
+                }
 			}
 
 			return null;
@@ -229,30 +209,10 @@ namespace AoC2024_15
 
 	}
 
-	public class MapEntity
-	{
-		public Coordinate Position { get; set; }
-		public Type Type { get; set; }
-
-		public MapEntity(Coordinate startPosition, Type type)
-		{
-			Position = startPosition;
-			Type = type;
-		}
-
-	}
-
-	public struct Coordinate
-	{
-		public int X { get; set; }
-		public int Y { get; set; }
-		public Coordinate(int x, int y) { X = x; Y = y; }
-	}
-
 	public enum Type
 	{
 		wall,
 		box,
-		robot
+		empty
 	}
 }

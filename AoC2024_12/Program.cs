@@ -1,197 +1,135 @@
 ﻿using System.Diagnostics;
-using System.Net.WebSockets;
 
 namespace AoC2024_12
 {
-	internal class Program
-	{
-		public static List<Region> Regions = [];
-		public static bool useTestData = true;
-		public static string path = useTestData ? "Test" : "Real";
-		public static string[] farm = File.ReadAllLines($"{path}/input.txt").Reverse().ToArray();
-		public static readonly int[,] Directions = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }; // e, w, n, s
-		public static int[] PerimiterTypes = [0, 1, 2, 3]; //e, w, n, s
-		public static bool[,] Visited;
+    internal class Program
+    {
+        public static List<Region> Regions = [];
+        public static bool useTestData = false;
+        public static string path = useTestData ? "Test" : "Real";
+        public static string[] farm = File.ReadAllLines($"{path}/input.txt").Reverse().ToArray();
+        public static readonly List<int[]> Directions = [[0, 1], [1, 1], [1, 0], [1, -1], [0, -1], [-1, -1], [-1, 0], [-1, 1]]; //n, ne, e, se, s, sw, w, nw
+        public static bool[,] Visited;
 
-		static void Main(string[] args)
-		{
-			var timer = new Stopwatch();
-			timer.Start();
-			Visited = new bool[farm.Length, farm[0].Length];
+        static void Main(string[] args)
+        {
+            var timer = new Stopwatch();
+            timer.Start();
+            Visited = new bool[farm.Length, farm[0].Length];
 
-			for (var y = 0; y < farm.Length; y++)
-			{
-				var row = farm[y];
-				for (var x = 0; x < row.Length; x++)
-				{
-					var plant = new Plant
-					{
-						Coordinate = new Coordinate(x, y),
-						Type = farm[y][x]
-					};
+            for (var y = 0; y < farm.Length; y++)
+            {
+                var row = farm[y];
+                for (var x = 0; x < row.Length; x++)
+                {
+                    if (!Visited[x, y])
+                    {
+                        var region = new Region
+                        {
+                            Type = farm[y][x]
+                        };
+                        Regions.Add(region);
+                        Visited[x, y] = true;
+                        MapAllCropsWithinArea(x, y, region);
+                    }
+                }
+            }
 
-					if (!Visited[x, y])
-					{
-						var region = CreateNewPlantRegion(farm[y][x]);
-						Regions.Add(region);
-						Visited[x, y] = true;
-						MapAllCropsWithinArea(x, y, plant, region);
-					}
-				}
-			}
+            var p1Result = Regions.Sum(region => region.Plants * region.Perimiter);
+            Console.WriteLine($"Time (ms): {timer.ElapsedMilliseconds} \nPart 1: {p1Result}");
 
-			var p1Result = 0;
-			foreach (var region in Regions)
-			{
-				p1Result += region.Plants.Count * region.Perimiter;
-			}
-			Console.WriteLine($"Time (ms): {timer.ElapsedMilliseconds}");
-			Console.WriteLine($"part 1: {p1Result}");
+            CountSides();
 
-			foreach (var region in Regions)
-			{
+            var p2Result = Regions.Sum(region => region.Sides * region.Plants);
+            timer.Stop();
+            Console.WriteLine($"Time (ms): {timer.ElapsedMilliseconds} \nPart 2: {p2Result}");
+        }
 
-				foreach (var perimiterType in PerimiterTypes)
-				{
-					var plantsInRegionWithSameDirection = region.Plants.Where(plants => plants.Perimiters.Any(plantPerimiter => plantPerimiter == perimiterType));
+        public static void MapAllCropsWithinArea(int x, int y, Region region)
+        {
+            region.Plants++;
 
-					var splitBySides = new List<IEnumerable<IEnumerable<int>>>();
-					int solitarySidePerimiter = 0;
+            for (var index = 0; index < Directions.Count; index++)
+            {
+                var direction = Directions[index];
+                var dx = direction[0];
+                var dy = direction[1];
 
-					if (perimiterType == 0 || perimiterType == 1)
-					{
-						var perimitersOnSameRow = plantsInRegionWithSameDirection.OrderBy(plants => plants.Coordinate.Y)
-							.GroupBy(plants => plants.Coordinate.X).Where(plants => plants.Count() > 1)
-							.Select(x => x.Select(x => x.Coordinate)).ToList();
+                var adjacentX = dx + x;
+                var adjacentY = dy + y;
+                
+                if (!IsPartOfRegion(adjacentX, adjacentY, region.Type))
+                {
+                    if (index % 2 == 0)
+                    {
+                        region.Perimiter++;
+                    }
 
-						splitBySides = perimitersOnSameRow.Select(x => x.Select(x => x.Y)
-								.Select((value, index) => new { value, groupKey = value - index })
-								.GroupBy(x => x.groupKey)
-								.Select(group => group.Select(x => x.value))).ToList();
+                    if (!region.Coordinates.Any(coord => coord[0] == x && coord[1] == y))
+                    {
+                        region.Coordinates.Add([x, y]);
+                    }
+                }
+                else if (!Visited[adjacentX, adjacentY])
+                {
+                    Visited[adjacentX, adjacentY] = true;
+                    MapAllCropsWithinArea(adjacentX, adjacentY, region);
+                }
+            }
+        }
 
-						solitarySidePerimiter = plantsInRegionWithSameDirection.GroupBy(plants => plants.Coordinate.X)
-							.Where(plants => plants.Count() == 1).Count();
+        public static bool IsPartOfRegion(int x, int y, char region)
+        {
+            return !(y < 0 || y >= farm.Length || x < 0 || x >= farm[y].Length) && farm[y][x] == region;
+        }
 
-					}
+        public static void CountSides()
+        {
+            foreach (var region in Regions)
+            {
+                foreach (var coordinate in region.Coordinates)
+                {
+                    for (var index = 0; index < Directions.Count; index += 2)
+                    {
+                        var x = coordinate[0];
+                        var y = coordinate[1];
 
-					if (perimiterType == 2 || perimiterType == 3)
-					{
-						var perimitersOnSameRow = plantsInRegionWithSameDirection.OrderBy(plants => plants.Coordinate.X)
-							.GroupBy(plants => plants.Coordinate.Y).Where(plants => plants.Count() > 1).Select(x => x.Select(x => x.Coordinate)).ToList();
+                        var firstDirection = index < 6 ? Directions[index + 2] : Directions[0];
+                        var firstX = x + firstDirection[0];
+                        var firstY = y + firstDirection[1];
 
-						splitBySides = perimitersOnSameRow.Select(x => x.Select(x => x.X)
-						.Select((value, index) => new { value, groupKey = value - index })
-						.GroupBy(x => x.groupKey)
-						.Select(group => group.Select(x => x.value))).ToList();
+                        var intermediateDirection = Directions[index + 1];
+                        var interX = x + intermediateDirection[0];
+                        var interY = y + intermediateDirection[1];
 
-						solitarySidePerimiter = plantsInRegionWithSameDirection.GroupBy(plants => plants.Coordinate.Y)
-							.Where(plants => plants.Count() == 1).Count();
+                        var secondDirection = Directions[index];
+                        var secondX = x + secondDirection[0];
+                        var secondY = y + secondDirection[1];
 
-					}
+                        var isFirstCoordinatePartOfRegion = IsPartOfRegion(firstX, firstY, region.Type);
+                        var isSecondCoordinatePartOfRegion = IsPartOfRegion(secondX, secondY, region.Type);
 
-					var sideCounter = 0;
+                        if (!isFirstCoordinatePartOfRegion && !isSecondCoordinatePartOfRegion)
+                        {
+                            region.Sides++;
+                        }
+                        else if (isFirstCoordinatePartOfRegion && isSecondCoordinatePartOfRegion && farm[interY][interX] != region.Type)
+                        {
+                            region.Sides++;
+                        }
+                    }
+                }
+            }
+        }
+    }
 
-					for (int i = 0; i < splitBySides.Count; i++)
-					{
-						sideCounter += splitBySides[i].Count();
-					}
+    public class Region
+    {
+        public char Type { get; set; }
+        public int Perimiter { get; set; }
+        public int Plants { get; set; }
+        public int Sides { get; set; }
+        public List<int[]> Coordinates = [];
 
-					region.Sides += sideCounter;
-					region.Sides += solitarySidePerimiter;
-				}
-			}
-
-			var p2Result = 0;
-			foreach (var region in Regions)
-			{
-				p2Result += region.Sides * region.Plants.Count;
-			}
-
-			timer.Stop();
-
-			Console.WriteLine($"Time (ms): {timer.ElapsedMilliseconds}");
-			Console.WriteLine($"part 2: {p2Result}");
-		}
-
-		public static void MapAllCropsWithinArea(int startingX, int startingY, Plant plant, Region region)
-		{
-			region.Plants.Add(plant);
-
-			for (int direction = 0; direction < 4; direction++)
-			{
-				var dx = Directions[direction, 0];
-				var dy = Directions[direction, 1];
-
-				var adjacentX = dx + startingX;
-				var adjacentY = dy + startingY;
-
-				var isOutsideMapEdges = adjacentY < 0 || adjacentY >= farm.Length || adjacentX < 0 || adjacentX >= farm[startingY].Length;
-				var isNeighbourSameAsCurrentPosition = false;
-
-				if (!isOutsideMapEdges)
-				{
-					isNeighbourSameAsCurrentPosition = farm[startingY][startingX] == farm[adjacentY][adjacentX];
-				}
-
-				if (isOutsideMapEdges || !isNeighbourSameAsCurrentPosition)
-				{
-					region.Perimiter++;
-					plant.Perimiters.Add(direction);
-				}
-
-				if (!isOutsideMapEdges && isNeighbourSameAsCurrentPosition && !Visited[adjacentX, adjacentY])
-				{
-					var newCrop = new Plant
-					{
-						Coordinate = new Coordinate(adjacentX, adjacentY),
-						Type = farm[startingY][startingX]
-					};
-					Visited[adjacentX, adjacentY] = true;
-
-					MapAllCropsWithinArea(adjacentX, adjacentY, newCrop, region);
-				}
-			}
-		}
-
-		public static Region CreateNewPlantRegion(char type)
-		{
-			var identifier = 0;
-
-			if (Regions.Any(x => x.Type == type))
-			{
-				identifier = Regions.Where(x => x.Type == type).Max(x => x.Identifier) + 1;
-			}
-
-			return new Region
-			{
-				Type = type,
-				Plants = [],
-				Identifier = identifier
-			};
-		}
-	}
-
-
-	public struct Coordinate
-	{
-		public int X { get; set; }
-		public int Y { get; set; }
-		public Coordinate(int x, int y) { X = x; Y = y; }
-	}
-
-	public class Plant
-	{
-		public Coordinate Coordinate { get; set; }
-		public char Type { get; set; }
-		public List<int> Perimiters = new List<int>();
-	}
-
-	public class Region
-	{
-		public int Identifier { get; set; }
-		public char Type { get; set; }
-		public int Perimiter { get; set; }
-		public List<Plant> Plants { get; set; }
-		public int Sides { get; set; }	
-	}
+    }
 }
