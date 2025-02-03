@@ -8,7 +8,7 @@ namespace AoC2024_15
 		private static string[]? map;
 		private static List<Entity>? part2Map = [];
 		private static List<Entity>? part1Map = [];
-		private static List<Direction> intMovements = [];
+		private static List<Direction> moves = [];
 		private static int Y = 1;
 		private static int X = 0;
 		private static Stopwatch timer = new();
@@ -27,13 +27,7 @@ namespace AoC2024_15
 
 			timer.Start();
 
-			foreach (char i in replacedMovements)
-			{
-				if (i != '\n' && i != '\r')
-				{
-					intMovements.Add((Direction) i - '0');
-				}
-			}
+			moves = replacedMovements.Where(c => !char.IsWhiteSpace(c)).Select(c => (Direction)(c - '0')).ToList();
 
 			RunPart2();
 
@@ -54,36 +48,39 @@ namespace AoC2024_15
 
 			var robot = part2Map.First(x => x.Type == Type.Robot);
 
-			int distanceToClosestWall;
+			Entity? closestWallPosition;
 			int distanceToClosestBox;
 
 			if (direction == Direction.East)
 			{
-				wallsOnRow = part2Map.Where(wall => wall.Coordinates[Y] == robot.Coordinates[Y] && wall.Type == Type.Wall && wall.Coordinates[X] > robot.Coordinates[X]).ToList();
+				wallsOnRow = part2Map.Where(wall => wall.Coordinates[Y] == robot.Coordinates[Y] 
+					&& wall.Type == Type.Wall && wall.Coordinates[X] > robot.Coordinates[X]).ToList();
 
-				var closestWallPosition = wallsOnRow.Aggregate((minPos, nextPos) =>
+				closestWallPosition = wallsOnRow.Aggregate((minPos, nextPos) =>
 					GetDistanceBetween(robot.Coordinates, nextPos.Coordinates) < GetDistanceBetween(robot.Coordinates, minPos.Coordinates) ? nextPos : minPos);
 
 				boxesOnRow = part2Map.Where(box => box.Coordinates[Y] == robot.Coordinates[Y]
-					&& (box.Type == Type.RightBox || box.Type == Type.LeftBox || box.Type == Type.Part1Box)
-					&& box.Coordinates[X] > robot.Coordinates[X] && box.Coordinates[X] < closestWallPosition.Coordinates[X]).OrderBy(x => x.Coordinates[X]).ToList();
+					&& box.IsBox
+					&& box.Coordinates[X] > robot.Coordinates[X] && box.Coordinates[X] < closestWallPosition.Coordinates[X])
+					.OrderBy(x => x.Coordinates[X]).ToList();
 
-				distanceToClosestWall = GetDistanceBetween(robot.Coordinates, closestWallPosition.Coordinates);
 			}
 			else
 			{
-				wallsOnRow = part2Map.Where(wall => wall.Coordinates[Y] == robot.Coordinates[Y] && wall.Type == Type.Wall && wall.Coordinates[X] < robot.Coordinates[X]).ToList();
+				wallsOnRow = part2Map.Where(wall => wall.Coordinates[Y] == robot.Coordinates[Y] 
+					&& wall.Type == Type.Wall && wall.Coordinates[X] < robot.Coordinates[X]).ToList();
 
-				var closestWallPosition = wallsOnRow.Aggregate((minPos, nextPos) => 
+				closestWallPosition = wallsOnRow.Aggregate((minPos, nextPos) => 
 					GetDistanceBetween(robot.Coordinates, nextPos.Coordinates) < GetDistanceBetween(robot.Coordinates, minPos.Coordinates) ? nextPos : minPos);
 				
 				boxesOnRow = part2Map.Where(box => box.Coordinates[Y] == robot.Coordinates[Y]
-					&& (box.Type == Type.RightBox || box.Type == Type.LeftBox || box.Type == Type.Part1Box)
-					&& box.Coordinates[X] < robot.Coordinates[X] && box.Coordinates[X] > closestWallPosition.Coordinates[X]).OrderByDescending(x => x.Coordinates[X]).ToList();
-
-				distanceToClosestWall = GetDistanceBetween(robot.Coordinates, closestWallPosition.Coordinates);
+					&& box.IsBox
+					&& box.Coordinates[X] < robot.Coordinates[X] && box.Coordinates[X] > closestWallPosition.Coordinates[X])
+					.OrderByDescending(x => x.Coordinates[X]).ToList();
 
 			}
+
+			var distanceToClosestWall = GetDistanceBetween(robot.Coordinates, closestWallPosition.Coordinates);
 
 			if (distanceToClosestWall == 1)
 			{
@@ -92,16 +89,10 @@ namespace AoC2024_15
 
 			if (boxesOnRow.Count > 0)
 			{
-				if (direction == Direction.East)
-				{
-					distanceToClosestBox = boxesOnRow.Min(pos => GetDistanceBetween(robot.Coordinates, pos.Coordinates));
-				}
-				else
-				{
-					distanceToClosestBox = boxesOnRow.Min(pos => GetDistanceBetween(robot.Coordinates, pos.Coordinates));
-				}
 
-				if(distanceToClosestBox > distanceToClosestWall && distanceToClosestWall > 1)
+				distanceToClosestBox = boxesOnRow.Min(pos => GetDistanceBetween(robot.Coordinates, pos.Coordinates));
+
+				if (distanceToClosestBox > distanceToClosestWall && distanceToClosestWall > 1)
 				{
 					robot.Coordinates[X] += Directions[(int) direction][X];
 					return;
@@ -168,7 +159,7 @@ namespace AoC2024_15
 					var columnOfNextMove = entity.Coordinates[X] + Directions[(int) direction][X];
 
 					var firstSide = part2Map.FirstOrDefault(x => x.Coordinates[X] == columnOfNextMove && x.Coordinates[Y] == rowOfNextMove);
-					Entity? secondSide = null;
+
 					if(firstSide == null)
 					{
 						if (GetDistanceBetween(robot.Coordinates, [columnOfNextMove, rowOfNextMove]) == 1)
@@ -183,21 +174,20 @@ namespace AoC2024_15
 					}
 					else
 					{
-						if (firstSide.Type != Type.Wall)
-						{
-							var secondSideColumn = columnOfNextMove + (firstSide.Type == Type.RightBox ? -1 : 1);
-							secondSide = part2Map.First(x => x.Coordinates[X] == secondSideColumn && x.Coordinates[Y] == rowOfNextMove);
-						}
 
-						if (firstSide.Type == Type.Wall || secondSide.Type == Type.Wall)
+						if (firstSide.Type == Type.Wall)
 						{
 							return;
 						}
 
-						if (firstSide.Type == Type.LeftBox || firstSide.Type == Type.RightBox)
+						if (firstSide.IsBox)
 						{
 
-							var positionIsAlreadyAdded = moveEntities.Any(x => x.Coordinates[X] == firstSide.Coordinates[X] && x.Coordinates[Y] == firstSide.Coordinates[Y]);
+							var secondSideColumn = columnOfNextMove + (firstSide.Type == Type.RightBox ? -1 : 1);
+							var secondSide = part2Map.First(x => x.Coordinates[X] == secondSideColumn && x.Coordinates[Y] == rowOfNextMove);
+
+							var positionIsAlreadyAdded = moveEntities.Any(addedEntity => addedEntity.Coordinates[X] == firstSide.Coordinates[X] 
+								&& addedEntity.Coordinates[Y] == firstSide.Coordinates[Y]);
 
 							if (!positionIsAlreadyAdded)
 							{
@@ -280,7 +270,7 @@ namespace AoC2024_15
 		public static void RunPart2()
 		{
 
-			foreach (var movement in intMovements)
+			foreach (var movement in moves)
 			{
 
 				if (movement == Direction.South || movement == Direction.North)
@@ -364,6 +354,7 @@ namespace AoC2024_15
 	{
 		public int[] Coordinates { get; set; }
 		public Type Type { get; set; }
+		public bool IsBox => Type == Type.LeftBox || Type == Type.RightBox || Type == Type.Part1Box;
 
 		public Entity(char type, int[] coordinates)
 		{
