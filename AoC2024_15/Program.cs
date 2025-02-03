@@ -1,218 +1,412 @@
-﻿using System;
-using System.Diagnostics;
-using System.Text;
+﻿using System.Diagnostics;
 
 namespace AoC2024_15
 {
 	internal class Program
 	{
-		private const bool useTestInput = true;
+		private const bool useTestInput = false;
 		private static string[]? map;
-		public static readonly List<int[]> Directions = [[0, 1], [1, 0], [0, -1], [-1, 0] ]; // n, e, s, w
+		private static List<Entity>? part2Map = [];
+		private static List<Entity>? part1Map = [];
+		private static List<Direction> intMovements = [];
+		private static int Y = 1;
+		private static int X = 0;
+		private static Stopwatch timer = new();
+		public static List<int[]> Directions = [[1, 0], [-1, 0], [0, 1], [0, -1]]; //e, w, s, n
 
 		static void Main(string[] args)
 		{
 
 			var path = useTestInput ? "Test" : "Real";
 			map = File.ReadAllLines($"{path}/map.txt");
-			var replacedDirections = File.ReadAllText($"{path}/directions.txt").Replace('v', '0').Replace('>', '1').Replace('^', '2').Replace('<', '3');
-            int[] robot = [];
-			var intDirections = new List<int>();
-            var timer = new Stopwatch();
-            timer.Start();
 
-			//p2
-			//If the tile is #, the new map contains ## instead.
-			// If the tile is O, the new map contains [] instead.
-			// If the tile is ., the new map contains .. instead.
-			// If the tile is @, the new map contains @. instead.
+			part1Map = GetPart1Map(map);
+			part2Map = GetPart2Map(map);
+			var replacedMovements = File.ReadAllText($"{path}/directions.txt").Replace('>', '0').Replace('<', '1').Replace('v', '2').Replace('^', '3');
+			int[] robot = [];
 
-            foreach (char i in replacedDirections)
+			timer.Start();
+
+			foreach (char i in replacedMovements)
 			{
 				if (i != '\n' && i != '\r')
 				{
-					intDirections.Add(i - '0');
+					intMovements.Add((Direction) i - '0');
 				}
 			}
 
-			for (int y = 0; y < map.Length; y++)
-			{
-				if (map[y].IndexOf('@') > 0)
-				{
-					robot = [map[y].IndexOf('@'), y];
-				}
-			}
-
-			foreach (var direction in intDirections)
-			{
-
-				var closestDot = GetPositionOfClosestCharacter('.', direction, robot);
-
-				if (closestDot != null)
-				{
-					var distanceToDot = GetDistanceBetween(robot, closestDot);
-
-					if (distanceToDot == 1)
-					{
-						Move('@', robot, closestDot);
-						robot = closestDot;
-					}
-					else
-					{
-						var closestWall = GetPositionOfClosestCharacter('#', direction, robot);
-
-						if (closestWall != null)
-						{
-							var distanceToWall = GetDistanceBetween(robot, closestWall);
-
-							if (distanceToDot < distanceToWall)
-							{
-
-
-								var numberOfBoxes = distanceToDot - 1;
-
-								for (var boxesLeft = numberOfBoxes; boxesLeft >= 1; boxesLeft--)
-								{
-									int[] moveBoxFrom;
-
-									switch (direction)
-									{
-										case 0:
-                                            moveBoxFrom = [robot[0], robot[1] + boxesLeft];
-                                            break;
-										case 1:
-                                            moveBoxFrom = [robot[0] + boxesLeft, robot[1]];
-                                            break;
-										case 2:
-                                            moveBoxFrom = [robot[0], robot[1] - boxesLeft];
-                                            break;
-										default:
-											moveBoxFrom = [robot[0] - boxesLeft, robot[1]];
-											break;
-									}
-
-                                    int[] moveBoxTo = [moveBoxFrom[0] + Directions[direction][0], moveBoxFrom[1] + Directions[direction][1]];
-                                    
-									Move('O', moveBoxFrom, moveBoxTo);
-								}
-
-								closestDot = GetPositionOfClosestCharacter('.', direction, robot);
-								Move('@', robot, closestDot);
-								robot = closestDot;
-
-							}
-						}
-					}
-				}
-
-				//var stringDirection = direction == 0 ? "east" : direction == 1 ? "west" : direction == 2 ? "north" : "south";
-
-            }
-
-            timer.Stop();
-            
-            double p1Score = 0;
-			for (int y = 0; y < map.Length; y++)
-			{
-                for (int x = 0; x < map[y].Length; x++)
-				{
-					if (map[y][x] == 'O')
-					{
-                        p1Score += 100 * y + x;
-                    }
-				}
-				Console.WriteLine(map[y]);
-			}
-
-
-
-			Console.WriteLine($"Timer: {timer.ElapsedMilliseconds} ms, part 1:{p1Score}");
-			
-			Console.ReadKey();
+			RunPart2();
 
 		}
+
 
 		public static int GetDistanceBetween(int[] a, int[] b)
 		{
-			return Math.Abs(a[0] - b[0]) + Math.Abs(a[1] - b[1]);
+			return Math.Abs(a[X] - b[X]) + Math.Abs(a[Y] - b[Y]);
 		}
 
-		public static void Move(char character, int[] from, int[] to)
-		{
-			var toRow = map[to[1]].ToCharArray();
-			toRow[to[0]] = character;
-			map[to[1]] = new string(toRow);
-
-			var fromRow = map[from[1]].ToCharArray();
-			fromRow[from[0]] = '.';
-			map[from[1]] = new string(fromRow);
-		}
-
-
-		public static int[]? GetPositionOfClosestCharacter(char character, int direction, int[] position)
+		public static void MoveHorizontally(Direction direction)
 		{
 
-			if (direction == 0)
+			List<Entity> wallsOnRow;
+			List<Entity> boxesOnRow;
+			List<Entity> toBeMoved = new List<Entity>();
+
+			var robot = part2Map.First(x => x.Type == Type.Robot);
+
+			int distanceToClosestWall;
+			int distanceToClosestBox;
+
+			if (direction == Direction.East)
 			{
-                //n
-                for (int y = position[1]; y <= map.Length - 1; y++)
-                {
-                    char? pivot = map[y][position[0]];
+				wallsOnRow = part2Map.Where(wall => wall.Coordinates[Y] == robot.Coordinates[Y] && wall.Type == Type.Wall && wall.Coordinates[X] > robot.Coordinates[X]).ToList();
 
-                    if (pivot == character)
-                    {
-                        return [position[0], y];
-                    }
-                }
+				var closestWallPosition = wallsOnRow.Aggregate((minPos, nextPos) =>
+					GetDistanceBetween(robot.Coordinates, nextPos.Coordinates) < GetDistanceBetween(robot.Coordinates, minPos.Coordinates) ? nextPos : minPos);
 
-            }
-			else if (direction == 1)
-			{
+				boxesOnRow = part2Map.Where(box => box.Coordinates[Y] == robot.Coordinates[Y]
+					&& (box.Type == Type.RightBox || box.Type == Type.LeftBox || box.Type == Type.Part1Box)
+					&& box.Coordinates[X] > robot.Coordinates[X] && box.Coordinates[X] < closestWallPosition.Coordinates[X]).OrderBy(x => x.Coordinates[X]).ToList();
 
-				//e
-                var currentRow = map[position[1]];
-                var indexOfClosest = currentRow.Substring(position[0]).IndexOf(character) + position[0];
-
-                if (indexOfClosest != -1 && indexOfClosest > position[0])
-                {
-                    return [indexOfClosest, position[1]];
-                }
-                
+				distanceToClosestWall = GetDistanceBetween(robot.Coordinates, closestWallPosition.Coordinates);
 			}
-			else if (direction == 2)
-			{
-				//s
-                for (int y = position[1]; y >= 0; y--)
-                {
-                    char? pivot = map[y][position[0]];
-                    if (pivot == character)
-                    {
-                        return [position[0], y];
-                    }
-                }
-                
-            }
 			else
 			{
-				//w
-                var currentRow = map[position[1]];
-                var indexOfClosest = currentRow.Substring(0, position[0]).LastIndexOf(character);
+				wallsOnRow = part2Map.Where(wall => wall.Coordinates[Y] == robot.Coordinates[Y] && wall.Type == Type.Wall && wall.Coordinates[X] < robot.Coordinates[X]).ToList();
 
-                if (indexOfClosest != -1)
-                {
-                    return [indexOfClosest, position[1]];
-                }
+				var closestWallPosition = wallsOnRow.Aggregate((minPos, nextPos) => 
+					GetDistanceBetween(robot.Coordinates, nextPos.Coordinates) < GetDistanceBetween(robot.Coordinates, minPos.Coordinates) ? nextPos : minPos);
+				
+				boxesOnRow = part2Map.Where(box => box.Coordinates[Y] == robot.Coordinates[Y]
+					&& (box.Type == Type.RightBox || box.Type == Type.LeftBox || box.Type == Type.Part1Box)
+					&& box.Coordinates[X] < robot.Coordinates[X] && box.Coordinates[X] > closestWallPosition.Coordinates[X]).OrderByDescending(x => x.Coordinates[X]).ToList();
+
+				distanceToClosestWall = GetDistanceBetween(robot.Coordinates, closestWallPosition.Coordinates);
+
 			}
 
-			return null;
+			if (distanceToClosestWall == 1)
+			{
+				return;
+			}
+
+			if (boxesOnRow.Count > 0)
+			{
+				if (direction == Direction.East)
+				{
+					distanceToClosestBox = boxesOnRow.Min(pos => GetDistanceBetween(robot.Coordinates, pos.Coordinates));
+				}
+				else
+				{
+					distanceToClosestBox = boxesOnRow.Min(pos => GetDistanceBetween(robot.Coordinates, pos.Coordinates));
+				}
+
+				if(distanceToClosestBox > distanceToClosestWall && distanceToClosestWall > 1)
+				{
+					robot.Coordinates[X] += Directions[(int) direction][X];
+					return;
+				}
+
+				if (distanceToClosestWall <= boxesOnRow.Count + 1)
+				{
+					return;
+				}
+
+				if (distanceToClosestBox == 1)
+				{
+					toBeMoved.Add(boxesOnRow[X]);
+					for (var i = 1; i < boxesOnRow.Count; i++)
+					{
+						if (GetDistanceBetween(boxesOnRow[i - 1].Coordinates, boxesOnRow[i].Coordinates) != 1)
+						{
+							break;
+						}
+						
+						toBeMoved.Add(boxesOnRow[i]);
+						
+					}
+
+					foreach (var box in toBeMoved)
+					{
+						box.Coordinates[X] += Directions[(int) direction][X];
+					}
+				}
+			}
+
+			robot.Coordinates[X] += Directions[(int) direction][X];
+
 		}
 
+		public static void MoveVertically(Direction direction)
+		{
+			var robot = part2Map.First(e => e.Type == Type.Robot);
+			var moveEntities = new List<Entity> { robot };
+
+			var searchPositionsOnRow = new List<Entity>();
+			var searchPositionsOnNextRow = new List<Entity>();
+
+			searchPositionsOnRow.Add(robot);
+
+			while (true)
+			{
+				if (searchPositionsOnRow.Count == 0)
+				{
+					//we're still here, and no # was found... and nothing in list...
+					//this should mean we're ready to move everything
+					foreach (var entity in moveEntities)
+					{
+						entity.Coordinates[Y] += Directions[(int) direction][Y];
+					}
+
+					return;
+				}
+
+				foreach (var entity in searchPositionsOnRow)
+				{
+
+					var rowOfNextMove = entity.Coordinates[Y] + Directions[(int) direction][Y];
+					var columnOfNextMove = entity.Coordinates[X] + Directions[(int) direction][X];
+
+					var firstSide = part2Map.FirstOrDefault(x => x.Coordinates[X] == columnOfNextMove && x.Coordinates[Y] == rowOfNextMove);
+					Entity? secondSide = null;
+					if(firstSide == null)
+					{
+						if (GetDistanceBetween(robot.Coordinates, [columnOfNextMove, rowOfNextMove]) == 1)
+						{
+							var rowOfNextMoveRobot = robot.Coordinates[Y] + Directions[(int) direction][Y];
+							var columnOfNextMoveRobot = robot.Coordinates[X] + Directions[(int) direction][X];
+
+							robot.Coordinates = [columnOfNextMoveRobot, rowOfNextMoveRobot];
+							return;
+
+						}
+					}
+					else
+					{
+						if (firstSide.Type != Type.Wall)
+						{
+							var secondSideColumn = columnOfNextMove + (firstSide.Type == Type.RightBox ? -1 : 1);
+							secondSide = part2Map.First(x => x.Coordinates[X] == secondSideColumn && x.Coordinates[Y] == rowOfNextMove);
+						}
+
+						if (firstSide.Type == Type.Wall || secondSide.Type == Type.Wall)
+						{
+							return;
+						}
+
+						if (firstSide.Type == Type.LeftBox || firstSide.Type == Type.RightBox)
+						{
+
+							var positionIsAlreadyAdded = moveEntities.Any(x => x.Coordinates[X] == firstSide.Coordinates[X] && x.Coordinates[Y] == firstSide.Coordinates[Y]);
+
+							if (!positionIsAlreadyAdded)
+							{
+								searchPositionsOnNextRow.Add(firstSide);
+								moveEntities.Add(firstSide);
+
+								searchPositionsOnNextRow.Add(secondSide);
+								moveEntities.Add(secondSide);
+							}
+
+						}
+					}
+				}
+				searchPositionsOnRow.Clear();
+				searchPositionsOnRow.AddRange(searchPositionsOnNextRow);
+
+				searchPositionsOnNextRow.Clear();
+			}
+		}
+
+		public static List<Entity> GetPart1Map(string[] map)
+		{
+			var toReturn = new List<Entity>();
+
+			for (var y = 0; y < map.Length; y++)
+			{
+				for (var x = 0; x < map[y].Length; x++)
+				{
+					toReturn.Add(new Entity(map[y][x], [x, y]));
+				}
+			}
+
+			return toReturn;
+
+		}
+
+		public static List<Entity> GetPart2Map(string[] part1Map)
+		{
+
+			var toReturn = new List<Entity>();
+
+			for (int y = 0; y < part1Map.Length; y++)
+			{
+				for (int x = 0; x < part1Map[y].Length; x++)
+				{
+					var toAdd = "";
+					if (part1Map[y][x] == '#')
+					{
+						toAdd += "##";
+					}
+
+					if (part1Map[y][x] == 'O')
+					{
+						toAdd += "[]";
+					}
+
+					if (part1Map[y][x] == '@')
+					{
+						toAdd += "@.";
+					}
+
+					for (var i = 0; i < toAdd.Length; i++)
+					{
+						if (toAdd[i] != '.')
+						{
+							toReturn.Add(new Entity(toAdd[i], [x * 2 + i, y]));
+						}
+					}
+				}
+			}
+
+			return toReturn;
+
+		}
+
+		public static void RunPart1()
+		{
+
+		}
+
+		public static void RunPart2()
+		{
+
+			//var robot = part2Map.First(entity => entity.Type == Type.Robot);
+
+			foreach (var movement in intMovements)
+			{
+
+				if (movement == Direction.South || movement == Direction.North)
+				{
+					MoveVertically(movement);
+				}
+				else
+				{
+					MoveHorizontally(movement);
+				}		
+			}
+
+			timer.Stop();
+
+			var score = part2Map.Where(x => x.Type == Type.LeftBox).Sum(x => 100 * x.Coordinates[Y] + x.Coordinates[X]);
+			Console.WriteLine($"{score}\nTime (ms): {timer.ElapsedMilliseconds}");
+
+
+		}
+
+		public void Print(int direction)
+		{
+			var stringDirection = direction == 0 ? "east" : direction == 1 ? "west" : direction == 2 ? "south" : "north";
+			
+			for (var y = 0; y <= part2Map.Max(y => y.Coordinates[Y]); y++)
+			{
+				var toAdd = "";
+				for (var x = 0; x <= part2Map.Max(x => x.Coordinates[X]); x++)
+				{
+					if (part2Map.Any(coords => coords.Coordinates[X] == x && coords.Coordinates[Y] == y))
+					{
+						toAdd += EnumToCharMap(part2Map.First(coords =>
+							coords.Coordinates[X] == x && coords.Coordinates[Y] == y).Type);
+					}
+					else
+					{
+						toAdd += '.';
+					}
+
+				}
+
+				if (toAdd.Contains('@'))
+				{
+					string[] toAddSplit = toAdd.Split(['\n', '@'], StringSplitOptions.RemoveEmptyEntries);
+					Console.Write(toAddSplit[0]);
+					Console.ForegroundColor = ConsoleColor.Red;
+					Console.Write("@");
+					Console.ResetColor();
+					Console.Write($"{toAddSplit[1]}\n");
+
+				}
+				else
+				{
+
+					Console.WriteLine(toAdd);
+				}
+			}
+		}
+
+		public static char EnumToCharMap(Type type)
+		{
+			switch (type)
+			{
+				case Type.LeftBox:
+					return '[';
+				case Type.RightBox:
+					return ']';
+				case Type.Part1Box:
+					return 'O';
+				case Type.Robot:
+					return '@';
+				case Type.Wall:
+					return '#';
+				default:
+					throw new ArgumentOutOfRangeException(nameof(type), type, null);
+			}
+		}
+	}
+
+	public class Entity
+	{
+		public int[] Coordinates { get; set; }
+		public Type Type { get; set; }
+
+		public Entity(char type, int[] coordinates)
+		{
+			Coordinates = coordinates;
+
+			switch (type)
+			{
+				case '[':
+					Type = Type.LeftBox;
+					break;
+				case ']':
+					Type = Type.RightBox;
+					break;
+				case 'O':
+					Type = Type.Part1Box;
+					break;
+				case '@':
+					Type = Type.Robot;
+					break;
+				case '#':
+					Type = Type.Wall;
+					break;
+			}
+		}
 	}
 
 	public enum Type
 	{
-		wall,
-		box,
-		empty
+		Wall,
+		Part1Box,
+		LeftBox,
+		RightBox,
+		Robot
+	}
+
+	public enum Direction
+	{
+		East = 0,
+		West = 1,
+		South = 2,
+		North = 3
 	}
 }
