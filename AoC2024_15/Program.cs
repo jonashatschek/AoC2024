@@ -207,7 +207,6 @@ namespace AoC2024_15
 								searchPositionsOnNextRow.Add(secondSide);
 								moveEntities.Add(secondSide);
 							}
-
 						}
 					}
 				}
@@ -280,8 +279,6 @@ namespace AoC2024_15
 
 		public static void RunPart2()
 		{
-
-			//var robot = part2Map.First(entity => entity.Type == Type.Robot);
 
 			foreach (var movement in intMovements)
 			{
