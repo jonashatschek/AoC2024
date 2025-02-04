@@ -9,8 +9,8 @@ namespace AoC2024_15
         private static List<Entity>? part2Map = [];
         private static List<Entity>? part1Map = [];
         private static List<Direction> moves = [];
-        private static int Y = 1;
-        private static int X = 0;
+        private const int Y = 1;
+        private const int X = 0;
         private static Stopwatch timer = new();
         public static List<int[]> Directions = [[1, 0], [-1, 0], [0, 1], [0, -1]]; //e, w, s, n
 
@@ -272,15 +272,15 @@ namespace AoC2024_15
 
         public static void Run(bool part2)
         {
-            foreach (var movement in moves)
+            foreach (var move in moves)
             {
-                if (movement == Direction.South || movement == Direction.North)
+                if (move == Direction.South || move == Direction.North)
                 {
-                    MoveVertically(movement, part2);
+                    MoveVertically(move, part2);
                 }
                 else
                 {
-                    MoveHorizontally(movement, part2);
+                    MoveHorizontally(move, part2);
                 }
             }
 
