@@ -12,7 +12,7 @@ namespace AoC2024_15
         private const int Y = 1;
         private const int X = 0;
         private static Stopwatch timer = new();
-        public static List<int[]> Directions = [[1, 0], [-1, 0], [0, 1], [0, -1]]; //e, w, s, n
+        public static List<int[]> Directions = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 
         static void Main(string[] args)
         {
@@ -157,20 +157,18 @@ namespace AoC2024_15
                 {
 
                     var rowOfNextMove = entity.Coordinates[Y] + Directions[(int)direction][Y];
-                    var columnOfNextMove = entity.Coordinates[X] + Directions[(int)direction][X];
 
-                    var firstSide = map.FirstOrDefault(x => x.Coordinates[X] == columnOfNextMove && x.Coordinates[Y] == rowOfNextMove);
+                    var firstSide = map.FirstOrDefault(x => x.Coordinates[X] == entity.Coordinates[X] && x.Coordinates[Y] == rowOfNextMove);
 
                     if (firstSide == null)
                     {
-                        if (GetDistanceBetween(robot.Coordinates, [columnOfNextMove, rowOfNextMove]) == 1)
+                        if (GetDistanceBetween(robot.Coordinates, [entity.Coordinates[X], rowOfNextMove]) == 1)
                         {
                             var rowOfNextMoveRobot = robot.Coordinates[Y] + Directions[(int)direction][Y];
                             var columnOfNextMoveRobot = robot.Coordinates[X] + Directions[(int)direction][X];
 
                             robot.Coordinates = [columnOfNextMoveRobot, rowOfNextMoveRobot];
                             return;
-
                         }
                     }
                     else
@@ -194,7 +192,7 @@ namespace AoC2024_15
 
                                 if (part2)
                                 {
-                                    var secondSideColumn = columnOfNextMove + (firstSide.Type == Type.RightBox ? -1 : 1);
+                                    var secondSideColumn = entity.Coordinates[X] + (firstSide.Type == Type.RightBox ? -1 : 1);
                                     var secondSide = part2Map.First(x => x.Coordinates[X] == secondSideColumn && x.Coordinates[Y] == rowOfNextMove);
 
                                     searchPositionsOnNextRow.Add(secondSide);
@@ -295,9 +293,8 @@ namespace AoC2024_15
         {
 
             var map = part2 ? part2Map : part1Map;
-            var stringDirection = direction == Direction.East ? "east" : direction == Direction.West ? "west" : direction == Direction.South ? "south" : "north";
-
-            Console.WriteLine(stringDirection);
+            
+            Console.WriteLine(direction.ToString());
 
             for (var y = 0; y <= map.Max(y => y.Coordinates[Y]); y++)
             {
